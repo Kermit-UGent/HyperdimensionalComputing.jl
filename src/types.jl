@@ -292,10 +292,19 @@ struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
 end
 
-#Base.eltype(::FHRR{T}) where {T} = Complex{T}
+function FHRR(;
+        D::Integer = 10_000,
+        T::Type = Float64,
+        seed::Union{Integer, Nothing} = nothing,
+        rng = Random.MersenneTwister
+    )
+    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    return FHRR(exp.(2π * im .* rand(rng_instance, T, D)))
+end
 
-FHRR(n::Int = 10_000) = FHRR(exp.(2π * im .* rand(n)))
-FHRR(T::Type, n::Int = 10_000) = FHRR(exp.(2π * im .* rand(T, n)))
+function FHRR(this::Any; D::Integer = 10_000, T::Type = Float64, rng = Random.MersenneTwister)
+    return FHRR(; T = T, D = D, seed = hash(this), rng = rng)
+end
 
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))
 

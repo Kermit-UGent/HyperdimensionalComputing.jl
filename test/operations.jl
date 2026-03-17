@@ -69,9 +69,10 @@ using LinearAlgebra, Random
             end
         end
     end
+
     @testset "FHRR" begin
-        hv1 = FHRR(n)
-        hv2 = FHRR(n)
+        hv1 = FHRR(; D = n)
+        hv2 = FHRR(; D = n)
 
         @test bundle([hv1, hv2]) isa FHRR
         @test hv1 + hv2 isa FHRR

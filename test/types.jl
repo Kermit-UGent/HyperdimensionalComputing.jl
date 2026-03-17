@@ -101,13 +101,12 @@ using Distributions, LinearAlgebra
     end
 
     @testset "FHRR" begin
-        hdv = FHRR(n)
+        hdv = FHRR(; D = n)
         @test length(hdv) == n
         @test eltype(hdv) <: Complex
         @test hdv[2] isa Complex
-
         @test sum(hdv) ≈ sum(hdv.v)
         @test norm(hdv) ≈ norm(hdv.v)
-
+        @test FHRR(s) == FHRR(; seed = hash_s)
     end
 end
