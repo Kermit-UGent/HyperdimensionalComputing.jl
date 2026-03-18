@@ -20,8 +20,6 @@ Let's start by loading the package in question, as follows:
 
 ````@example introduction-to-hdc
 using HyperdimensionalComputing
-
-ρ(hv::AbstractHDV, n::Int=1) = Π(hv,n) #hide
 ````
 
 # Creating hypervectors
@@ -29,7 +27,7 @@ using HyperdimensionalComputing
 First, we will create a random bipolar hypervector. This is done as follows:
 
 ````@example introduction-to-hdc
-BipolarHDV()
+BipolarHV()
 ````
 
 As you may see, by default the hypervector created has 10.000 dimensions. This is the default
@@ -37,32 +35,32 @@ value in `HyperdimensionalComputing.jl`, but one can can create a hypervector of
 dimensionality by providing the size of this as an argument:
 
 ````@example introduction-to-hdc
-BipolarHDV(8)
+BipolarHV(8)
 ````
 
 Alternatively, one can create a hypervector directly from a `AbstractVector`:
 
 ````@example introduction-to-hdc
-BipolarHDV(rand([-1,1], 8))
+BipolarHV(rand([-1, 1], 8))
 ````
 
 Let's create 3 bipolar hypervector to use for the tutorial:
 
 ````@example introduction-to-hdc
-h₁ = BipolarHDV(8)
-h₂ = BipolarHDV(8)
-h₃ = BipolarHDV(8);
+h₁ = BipolarHV(8)
+h₂ = BipolarHV(8)
+h₃ = BipolarHV(8);
 nothing #hide
 ````
 
-The package has different hypervector types, such as `BipolarHDV`, `TernaryHDV`, `RealHDV`,
-`GradedBipolarHDV`, and `GradedHDV`. All of this hypervectors have a common abstract type
-`AbstractHDV` which can be used to build additional functions or encoding strategies (more on
+The package has different hypervector types, such as `BipolarHV`, `TernaryHV`, `RealHV`,
+`GradedBipolarHV`, and `GradedHV`. All of this hypervectors have a common abstract type
+`AbstractHV` which can be used to build additional functions or encoding strategies (more on
 both later).
 
 !!! info "On (abstract) types"
     All hypervectors implemented on `HyperdimensionalComputing.jl` can be found by checking the
-    docstrings for the `AbstractHDV` (by typing `?AbstractHDV` on the Julia REPL).
+    docstrings for the `AbstractHV` (by typing `?AbstractHV` on the Julia REPL).
 
     For more information on a specific hypervector type, the docstrings contain information on
     the implementation, operations, similarity measurement and other technical
@@ -93,10 +91,10 @@ $$\text{sign}(i) = \begin{cases}
 In HyperdimensionalComputing.jl, you can bundle hypervectors as follows:
 
 ````@example introduction-to-hdc
-aggregate([h₁, h₂, h₃])
+bundle([h₁, h₂, h₃])
 ````
 
-alternatively, you can use the `+` operator (which if overloaded for all `AbstractHDV`):
+alternatively, you can use the `+` operator (which if overloaded for all `AbstractHV`):
 
 ````@example introduction-to-hdc
 h₁ + h₂ + h₃
@@ -121,11 +119,9 @@ where $[...]$ represents a normalization procedure.
 
 In HyperdimensionalComputing.jl, you can bind hypervectors as follows:
 
-````@example introduction-to-hdc
 bind([h₁, h₂, h₃])
-````
 
-alternatively, you can use the `*` operator (which if overloaded for all `AbstractHDV`):
+alternatively, you can use the `*` operator (which if overloaded for all `AbstractHV`):
 
 ````@example introduction-to-hdc
 h₁ * h₂ * h₃
@@ -212,18 +208,18 @@ explore some fundamental encoding strategies that demonstrate this flexibility.
 Animal hypervectors:
 
 ````@example introduction-to-hdc
-dog_hv = BipolarHDV()
-cat_hv = BipolarHDV()
-cow_hv = BipolarHDV()
+dog_hv = BipolarHV()
+cat_hv = BipolarHV()
+cow_hv = BipolarHV()
 animals = [dog_hv, cat_hv, cow_hv]
 ````
 
 Sound hypervectors:
 
 ````@example introduction-to-hdc
-bark_hv = BipolarHDV()
-meow_hv = BipolarHDV()
-moo_hv  = BipolarHDV()
+bark_hv = BipolarHV()
+meow_hv = BipolarHV()
+moo_hv = BipolarHV()
 sounds = [bark_hv, meow_hv, moo_hv]
 ````
 
@@ -256,22 +252,22 @@ having more animal that, for example, share sounds.
 Generate hypervectors for all characters in the alphabet
 
 ````@example introduction-to-hdc
-char2hv = Dict(c => BipolarHDV() for c in 'a':'z')
-char2hv[' '] = BipolarHDV()
+char2hv = Dict(c => BipolarHV() for c in 'a':'z')
+char2hv[' '] = BipolarHV()
 ````
 
 Encode the phrases using 3-grams
 
 ````@example introduction-to-hdc
 phrases = [
-	"the quick brown fox jumps over the lazy dog",
-	"the slick grown box bumps under the hazy fog",
-	"the thick known cox dumps inter the crazy cog",
-	"the brick shown pox lumps enter the glazy jog",
-	"the stick blown sox pumps winter the blazy log"
+    "the quick brown fox jumps over the lazy dog",
+    "the slick grown box bumps under the hazy fog",
+    "the thick known cox dumps inter the crazy cog",
+    "the brick shown pox lumps enter the glazy jog",
+    "the stick blown sox pumps winter the blazy log",
 ]
 
-ngrams(p, d) = aggregate([d[p[i]] + Π(d[p[i+1]], 1) + Π(d[p[i+2]], 2) for i in 1:length(p)-2])
+ngrams(p, d) = bundle([d[p[i]] + shift(d[p[i + 1]], 1) + shift(d[p[i + 2]], 2) for i in 1:(length(p) - 2)])
 
 phrases_hvs = [ngrams(p, char2hv) for p in phrases]
 ````
