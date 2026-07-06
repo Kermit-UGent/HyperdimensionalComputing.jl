@@ -17,13 +17,13 @@ DocMeta.setdocmeta!(
 )
 
 # Get repository information dynamically for fork support
-repo_url = get(ENV, "GITHUB_REPOSITORY", "michielstock/HyperdimensionalComputing.jl")
+repo_url = get(ENV, "GITHUB_REPOSITORY", "KERMIT-UGent/HyperdimensionalComputing.jl")
 repo_name = split(repo_url, "/")[end]
 repo_owner = split(repo_url, "/")[1]
 
 makedocs(;
     modules = [HyperdimensionalComputing],
-    authors = "Carlos Vigil-Vásquez, Dimi Boeckaerts, Michiel Stock, Steff Taelman",
+    authors = "KERMIT research group and contributors",
     repo = "https://github.com/$repo_url/blob/{commit}{path}#{line}",
     sitename = "HyperdimensionalComputing.jl",
     format = Documenter.HTML(;
@@ -55,3 +55,4 @@ deploydocs(;
         end
     end,
 )
+

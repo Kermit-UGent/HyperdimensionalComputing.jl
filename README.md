@@ -1,14 +1,14 @@
 # HyperdimensionalComputing.jl
 
-Hyperdimensional computing in Julia
-
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://KERMIT-UGent.github.io/HyperdimensionalComputing.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://KERMIT-UGent.github.io/HyperdimensionalComputing.jl/dev)
 [![Build Status](https://github.com/MichielStock/HyperdimensionalComputing.jl/workflows/CI/badge.svg)](https://github.com/MichielStock/HyperdimensionalComputing.jl/actions)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
+<img src="/docs/src/assets/logo.png" align="right" style="padding-left:10px;" width="400"/>
+
 This package implements special types of vectors and associated methods for hyperdimensional
-computing.
+computing/vector-symbolic architectures.
 
 Hyperdimensional computing (HDC) is a paradigm to represent patterns by means of a
 high-dimensional vectors (typically 10,000 dimensions). Specific operations can be used to
@@ -32,13 +32,13 @@ classifier is also supported.
 The package can be installed using Pkg.jl as follows:
 
 ```julia
-using Pkg; Pkg.add(url = "https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl")
+using Pkg; Pkg.add(url = "https://github.com/Kermit-UGent/HyperdimensionalComputing.jl")
 ```
 
 or in the package mode (by pressing `]`):
 
 ```julia-repl
-]add https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl#main
+]add https://github.com/Kermit-UGent/HyperdimensionalComputing.jl#main
 ```
 
 ## Usage
