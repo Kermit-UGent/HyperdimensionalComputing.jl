@@ -466,12 +466,12 @@ This encoding is based on the following mathematical notation:
 
 *Undirected graphs*
 ```math
-\\otimes_{i=1}^{m} S_i \\otimes T_i
+\\oplus_{i=1}^{m} S_i \\otimes T_i
 ```
 
 *Directed graphs*
 ```math
-\\otimes_{i=1}^{m} S_i \\otimes \\Pi(T_i)
+\\oplus_{i=1}^{m} S_i \\otimes \\Pi(T_i)
 ```
 
 where `K` and `V` are the key and value hypervector collections, `m` is the size of the
@@ -598,12 +598,12 @@ decodelevel(HV, numvalues; testbound = false) = decodelevel(level(HV, length(num
     convertlevel(hvlevels, numvals..., kwargs...)
     convertlevel(HV::AbstractHV, numvals..., kwargs...)
 
-Creates the `encoder` and `decoder` for a level incoding in one step. See `encodelevel`
+Creates the `encoder` and `decoder` for a level encoding in one step. See `encodelevel`
 and `decodelevel` for their respective documentations.
 """
-convertlevel(hvlevels, numvals...; kwargs...) = encodelevel(hvlevels, numvals...; kwargs...), decodelevel(hvlevels, numvals..., kwargs...)
+convertlevel(hvlevels, numvals...; kwargs...) = encodelevel(hvlevels, numvals...; kwargs...), decodelevel(hvlevels, numvals...; kwargs...)
 
-convertlevel(hv::AbstractHV, numvals...; kwargs...) = encodelevel(hv, numvals...; kwargs...), decodelevel(hv, numvals..., kwargs...)
+convertlevel(hv::AbstractHV, numvals...; kwargs...) = encodelevel(hv, numvals...; kwargs...), decodelevel(hv, numvals...; kwargs...)
 
 
 # levels using FHRR

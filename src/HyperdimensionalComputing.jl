@@ -1,6 +1,9 @@
 module HyperdimensionalComputing
 
-using Distances, Random, Distributions, LinearAlgebra
+using Random
+using Distributions
+import LinearAlgebra
+import LinearAlgebra: norm, dot
 
 include("types.jl")
 export AbstractHV,
@@ -23,7 +26,11 @@ export bundle,
     ρ,
     ρ!,
     perturbate,
-    perturbate!
+    perturbate!,
+    normalize,
+    normalize!,
+    norm,
+    dot
 
 include("encoding.jl")
 export multiset,
@@ -44,7 +51,5 @@ export similarity,
     δ,
     nearest_neighbor
 
-
-#include("learning.jl")
 
 end

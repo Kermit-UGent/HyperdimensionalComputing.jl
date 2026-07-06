@@ -1,10 +1,10 @@
-# HiperdimensionalComputing.jl
+# HyperdimensionalComputing.jl
 
 Hyperdimensional computing in Julia
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://michielstock.github.io/HyperdimensionalComputing.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://michielstock.github.io/HyperdimensionalComputing.jl/dev)
-[![Build Status](https://github.com/dimiboeckaerts/HyperdimensionalComputing.jl/workflows/CI/badge.svg)](https://github.com/dimiboeckaerts/HyperdimensionalComputing.jl/actions)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://KERMIT-UGent.github.io/HyperdimensionalComputing.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://KERMIT-UGent.github.io/HyperdimensionalComputing.jl/dev)
+[![Build Status](https://github.com/MichielStock/HyperdimensionalComputing.jl/workflows/CI/badge.svg)](https://github.com/MichielStock/HyperdimensionalComputing.jl/actions)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
 This package implements special types of vectors and associated methods for hyperdimensional
@@ -32,13 +32,13 @@ classifier is also supported.
 The package can be installed using Pkg.jl as follows:
 
 ```julia
-using Pkg; Pkg.add(url = "https://github.com/MichielStock/HyperdimensionalComputing.jl")
+using Pkg; Pkg.add(url = "https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl")
 ```
 
 or in the package mode (by pressing `]`):
 
 ```julia-repl
-]add https://github.com/MichielStock/HyperdimensionalComputing.jl#main
+]add https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl#main
 ```
 
 ## Usage
@@ -242,10 +242,10 @@ For more information, refer to the documentation.
 
 ## Support
 
-Please [open an issue](https://github.com/MichielStock/HyperdimensionalComputing.jl/issues/new) for
+Please [open an issue](https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl/issues/new) for
 support.
 
 ## Contributing
 
 Please contribute using [Github Flow](https://guides.github.com/introduction/flow/). Create a branch, add
-commits, and [open a pull request](https://github.com/MichielStock/HyperdimensionalComputing.jl/compare/).
+commits, and [open a pull request](https://github.com/KERMIT-UGent/HyperdimensionalComputing.jl/compare/).

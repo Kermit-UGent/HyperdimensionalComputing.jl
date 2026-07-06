@@ -2,7 +2,7 @@ const n = 100
 const s = :test
 const hash_s = hash(s)
 
-using Distributions, LinearAlgebra
+using Distributions
 
 @testset "types" begin
     @testset "BipolarHV" begin
@@ -41,6 +41,15 @@ using Distributions, LinearAlgebra
         @test similar(hdv) isa TernaryHV
         @test sum(hdv) ≈ sum(hdv.v)
         @test TernaryHV(s) == TernaryHV(; seed = hash_s)
+        for T in [Int8, Int16, Int32, Int64, Int]
+            @test eltype(TernaryHV{T}(; D = n)) <: T
+            @test TernaryHV{T}() + TernaryHV{T}() isa TernaryHV{T}
+            @test TernaryHV{T}() * TernaryHV{T}() isa TernaryHV{T}
+            @test shift(TernaryHV{T}()) isa TernaryHV{T}
+            @test normalize(TernaryHV{T}()) isa TernaryHV{T}
+            @test copy(TernaryHV{T}()) isa TernaryHV{T}
+            @test similar(TernaryHV{T}()) isa TernaryHV{T}
+        end
     end
 
     @testset "GradedBipolarHV" begin

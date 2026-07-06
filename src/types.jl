@@ -18,8 +18,6 @@ Every hypervector HV has the following basic functionality
 
 TODO:
 - [ ] SparseHV
-- [ ] complex HDC
-- [ ] support for different types
 =#
 
 # ----------------------------------------------------------------------------------- AbstractHV
@@ -33,7 +31,8 @@ Base.size(hv::AbstractHV) = size(hv.v)
 Base.sum(hv::AbstractHV) = sum(hv.v)
 
 LinearAlgebra.norm(hv::AbstractHV) = norm(hv.v)
-LinearAlgebra.normalize!(hv::AbstractHV) = hv
+normalize!(hv::AbstractHV) = hv
+normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 
 eldist(hv::AbstractHV) = eldist(typeof(hv))
 empty_vector(hv::AbstractHV) = zero(hv.v)
@@ -45,9 +44,10 @@ struct BipolarHV <: AbstractHV{Int}
     BipolarHV(v::AbstractVector{Bool}) = new(v)
 end
 
+# Outer constructors
 function BipolarHV(;
         D::Integer = 10_000,
-        seed::Union{Number, Nothing} = nothing,
+        seed::Union{Integer, Nothing} = nothing,
         rng = MersenneTwister
     )
     rng_instance = isnothing(seed) ? rng() : rng(seed)
@@ -80,7 +80,7 @@ eldist(::Type{BipolarHV}) = 2Bernoulli(0.5) - 1
 A ternary hypervector type based on the Multiply-Add-Permute (MAP) vector symbolic architecture
 (Gayler, 1998).
 
-Represents a hypervector with elements in `(-1, 1)`.
+Represents a hypervector with elements in `{-1, +1}`.
 
 # Extended help
 
@@ -88,11 +88,17 @@ Represents a hypervector with elements in `(-1, 1)`.
 
 - Gayler, R. W. (1998). Multiplicative Binding, Representation Operators & Analogy. In Advances in Analogy Research: Integration of Theory and Data from the Cognitive, Computational, and Neural Sciences, pages 1–4.
 """
-struct TernaryHV <: AbstractHV{Int}
-    v::Vector{Int}
+struct TernaryHV{T <: Integer} <: AbstractHV{T}
+    v::Vector{T}
 
-    TernaryHV(v::AbstractVector{<:Integer}) = new(v)
+    # Inner constructor for same type
+    TernaryHV{T}(v::AbstractVector{T}) where {T <: Integer} = new{T}(v)
+    # Inner constructor for type conversion
+    TernaryHV{T}(v::AbstractVector{<:Integer}) where {T <: Integer} = new{T}(convert(Vector{T}, v))
 end
+
+# Outer constructor that infers type from input
+TernaryHV(v::AbstractVector{T}) where {T <: Integer} = TernaryHV{T}(v)
 
 function TernaryHV(;
         D::Integer = 10_000,
@@ -100,7 +106,7 @@ function TernaryHV(;
         rng = Random.MersenneTwister
     )
     rng_instance = isnothing(seed) ? rng() : rng(seed)
-    return TernaryHV(rand(rng_instance, (-1, 1), D))
+    return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
 function TernaryHV(
@@ -109,18 +115,38 @@ function TernaryHV(
         rng = Random.MersenneTwister
     )
     rng_instance = rng(hash(this))
-    return TernaryHV(rand(rng_instance, (-1, 1), D))
+    return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
+end
+
+function TernaryHV{T}(;
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng = Random.MersenneTwister
+    ) where {T <: Integer}
+    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
+end
+
+function TernaryHV{T}(
+        this::Any;
+        D::Integer = 10_000,
+        rng = Random.MersenneTwister
+    ) where {T <: Integer}
+    rng_instance = rng(hash(this))
+    return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
 end
 
 # Helpers
-LinearAlgebra.normalize!(hv::TernaryHV) = clamp!(hv.v, -1, 1)
-LinearAlgebra.normalize(hv::TernaryHV) = TernaryHV(clamp.(hv, -1, 1))
-eldist(::Type{TernaryHV}) = 2Bernoulli(0.5) - 1
+Base.copy(hv::TernaryHV{T}) where {T} = TernaryHV{T}(copy(hv.v))
+Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D = length(hv))
+normalize!(hv::TernaryHV) = clamp!(hv.v, -1, 1)
+eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
+
 # ------------------------------------------------------------------------------------ BinaryHV
 """
     BinaryHV
 
-A ternary hypervector type based on the Binary Splatter Code (BSC) vector symbolic architecture
+A binary hypervector type based on the Binary Spatter Code (BSC) vector symbolic architecture
 (Kanerva, 1994; Kanerva, 1995; Kanerva, 1996; Kanerva, 1997).
 
 Represents a hypervector boolean elements, i.e. `(false, true)`.
@@ -174,6 +200,7 @@ struct RealHV{T <: Real} <: AbstractHV{T}
     ) where {T <: Real} = new{T}(v, distr)
 end
 
+# Constructors
 function RealHV(;
         distr::Distribution = eldist(RealHV),
         D::Integer = 10_000,
@@ -215,6 +242,7 @@ struct GradedHV{T <: Real} <: AbstractHV{T}
     ) where {T <: Real} = new{T}(clamp.(v, 0, 1), distr)
 end
 
+# Constructors
 function GradedHV(;
         D::Integer = 10_000,
         distr::Distribution = eldist(GradedHV),
@@ -239,9 +267,9 @@ end
 
 # Helpers
 Base.copy(hv::GradedHV) = GradedHV(copy(hv.v), hv.distr)
-Base.similar(hv::GradedHV) = GradedHV(; D = length(hv), distr = eldist(GradedHV))
+Base.similar(hv::GradedHV) = GradedHV(; D = length(hv), distr = hv.distr)
 Base.zeros(hv::GradedHV) = fill!(similar(hv.v), one(eltype(hv.v)) / 2)
-LinearAlgebra.normalize!(hv::GradedHV) = clamp!(hv.v, 0, 1)
+normalize!(hv::GradedHV) = clamp!(hv.v, 0, 1)
 eldist(::Type{<:GradedHV}) = Beta(1, 1)
 empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
@@ -282,11 +310,11 @@ end
 # Helpers
 Base.copy(hv::GradedBipolarHV) = GradedBipolarHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D = length(hv), distr = hv.distr)
-LinearAlgebra.normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
+normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
-# Fourier Holographically Reduced Represenetations
-# ------------------------------------------------
+# Fourier Holographic Reduced Representations
+# --------------------------------------------
 
 struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
@@ -309,12 +337,11 @@ end
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))
 
 """
-    LinearAlgebra.normalize!(hv::FHRR)
+    normalize!(hv::FHRR)
 
-A Fourier Holographically Reduced Represenetation is normalized by
-setting the norm of each complex element to 1.
+A Fourier Holographic Reduced Representation is normalized by setting the norm of each complex element to 1.
 """
-function LinearAlgebra.normalize!(hv::FHRR)
+function normalize!(hv::FHRR)
     hv.v ./= abs.(hv.v)
     return hv
 end
