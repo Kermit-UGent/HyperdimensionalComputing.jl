@@ -1,6 +1,6 @@
 module HyperdimensionalComputing
 
-using Distances, Random, Distributions, LinearAlgebra
+using Random, Distributions, LinearAlgebra
 
 include("types.jl")
 export AbstractHV,
@@ -44,7 +44,5 @@ export similarity,
     δ,
     nearest_neighbor
 
-
-#include("learning.jl")
 
 end

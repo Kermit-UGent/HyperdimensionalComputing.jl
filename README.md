@@ -4,7 +4,7 @@ Hyperdimensional computing in Julia
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://michielstock.github.io/HyperdimensionalComputing.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://michielstock.github.io/HyperdimensionalComputing.jl/dev)
-[![Build Status](https://github.com/dimiboeckaerts/HyperdimensionalComputing.jl/workflows/CI/badge.svg)](https://github.com/dimiboeckaerts/HyperdimensionalComputing.jl/actions)
+[![Build Status](https://github.com/MichielStock/HyperdimensionalComputing.jl/workflows/CI/badge.svg)](https://github.com/MichielStock/HyperdimensionalComputing.jl/actions)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
 This package implements special types of vectors and associated methods for hyperdimensional

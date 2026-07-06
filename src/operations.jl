@@ -2,8 +2,6 @@
 operations.jl; This file implements operations that can be done on hypervectors to enable them to encode text-based data.
 =#
 
-# Remark: use element-wise reduce, maybe using LazyArrays?
-
 #=
 
 | Operation            | symbol | remark                                                                                                          |
@@ -219,7 +217,7 @@ Base.isequal(v::AbstractHV, u::AbstractHV) = v.v == u.v
 """
     Base.isapprox(u::AbstractHV, v::AbstractHV, atol=length(u)/100, ptol=0.01)
 
-Measurures when two hypervectors are similar (have more elements in common than expected
+Measures when two hypervectors are similar (have more elements in common than expected
 by chance).
 
 One can specify either:
@@ -239,12 +237,12 @@ end
 """
     Base.isapprox(u::AbstractHV, v::AbstractHV, atol=length(u)/100, ptol=0.01)
 
-Measurures when two hypervectors are similar (have more elements in common than expected
+Measures when two hypervectors are similar (have more elements in common than expected
 by chance) using the Hamming distance. Uses a bootstrap to construct a null distribution.
 
 One can specify either:
 - `ptol=1e-10` threshold for seeing that many matches due to chance
-- `N_bootstap=200` number of samples for bootstrapping
+- `N_bootstrap=200` number of samples for bootstrapping
 """
 function Base.isapprox(u::T, v::T; ptol = 1.0e-10, N_bootstrap = 500) where {T <: AbstractHV}
     @assert length(u) == length(v) "Vectors have to be of equal length"
@@ -262,50 +260,47 @@ end
 
 
 # Perturbation
-function randbv(n::Int, m::Int)
-    v = falses(n)  # empty vector
-    v[1:m] .= true # set first m elements to 1
-    return shuffle!(v)
+function randbv(n::Int, m::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
+    v = falses(n)
+    v[1:m] .= true
+    return shuffle!(rng, v)
 end
 
-function randbv(n::Int, p::Number)
+function randbv(n::Int, p::Number; rng::AbstractRNG = Random.GLOBAL_RNG)
     @assert 0 ≤ p ≤ 1 "p should be a valid probability"
-    return randbv(n, round(Int, p * n))
+    return randbv(n, round(Int, p * n); rng = rng)
 end
 
-function randbv(n::Int, I)
+function randbv(n::Int, I; rng::AbstractRNG = Random.GLOBAL_RNG)
     v = falses(n)
     v[I] .= true
     return v
 end
 
-
-function perturbate!(::Type{HVByteVec}, hv::HV, I, dist = eldist(hv)) where {HV <: AbstractHV}
-    hv.v[I] .= rand(dist, length(I))
+function perturbate!(::Type{HVByteVec}, hv::HV, I, dist = eldist(hv); rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+    hv.v[I] .= rand(rng, dist, length(I))
     return hv
 end
 
-function perturbate!(::Type{HVByteVec}, hv::HV, M::BitVector, dist = eldist(hv)) where {HV <: AbstractHV}
-    hv.v[M] .= rand(dist, sum(M))
+function perturbate!(::Type{HVByteVec}, hv::HV, M::BitVector, dist = eldist(hv); rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+    hv.v[M] .= rand(rng, dist, sum(M))
     return hv
 end
 
-function perturbate!(::Type{HVByteVec}, hv::HV, p::Number, args...) where {HV <: AbstractHV}
-    return perturbate!(hv, randbv(length(hv), p), args...)
+function perturbate!(::Type{HVByteVec}, hv::HV, p::Number, args...; rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+    return perturbate!(hv, randbv(length(hv), p; rng = rng), args...; rng = rng)
 end
 
-function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs)
+function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG = Random.GLOBAL_RNG)
     n = length(hv)
-    M = randbv(n, binargs)  # turn whatever into a mask
+    M = randbv(n, binargs; rng = rng)
     hv.v .⊻= M
     return hv
 end
 
-perturbate!(hv, args...) = perturbate!(vectype(hv), hv, args...)
-
-perturbate(hv::AbstractHV, args...; kwargs...) = perturbate!(copy(hv), args...; kwargs...)
+perturbate!(hv, args...; rng::AbstractRNG = Random.GLOBAL_RNG) = perturbate!(vectype(hv), hv, args...; rng = rng)
+perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG, kwargs...) = perturbate!(copy(hv), args...; rng = rng, kwargs...)
 
 # OTHER
 # -----
-
 Base.:^(hv::FHRR, x::Number) = FHRR(hv.v .^ x)

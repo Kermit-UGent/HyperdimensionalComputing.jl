@@ -49,6 +49,9 @@ using LinearAlgebra, Random
                 hvp = perturbate(hv2, m)
                 @test hv2.v[m] != hvp.v[m]
                 @test hv2.v[.!m] ≈ hvp.v[.!m]
+
+                @test perturbate(hv1, 0.1, rng = MersenneTwister(1)) == perturbate(hv1, 0.1, rng = MersenneTwister(1))
+                @test perturbate(hv1, 0.1, rng = MersenneTwister(1)) != perturbate(hv1, 0.1, rng = MersenneTwister(2))
             end
 
             # currently not yet a good way of evaluating these
@@ -69,9 +72,10 @@ using LinearAlgebra, Random
             end
         end
     end
+
     @testset "FHRR" begin
-        hv1 = FHRR(n)
-        hv2 = FHRR(n)
+        hv1 = FHRR(; D = n)
+        hv2 = FHRR(; D = n)
 
         @test bundle([hv1, hv2]) isa FHRR
         @test hv1 + hv2 isa FHRR
