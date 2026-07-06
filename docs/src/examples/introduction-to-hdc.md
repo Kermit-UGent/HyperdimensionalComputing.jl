@@ -2,318 +2,369 @@
 EditURL = "introduction-to-hdc.jl"
 ```
 
-````@example introduction-to-hdc
-using Handcalcs #hide
-````
-
-# Introduction
+# Introduction to Hyperdimensional Computing (the HDC kitchen)
 
 Hyperdimensional Computing (HDC) is a brain-inspired computational paradigm that represents
 and manipulates information using high-dimensional vectors called **hypervectors**. These
-vectors typically have thousands of dimensions (often 1,000-10,000), making them
-"hyperdimensional."
+vectors typically have thousands of dimensions (often 1.000-10.000), making them
+"hyperdimensional." The key insight is that high-dimensional spaces have unusual mathematical
+properties that allow for robust, fault-tolerant computation.
 
-The key insight is that high-dimensional spaces have unique mathematical properties that allow
-for robust, fault-tolerant computation.
+Rather than listing those properties in the abstract, let's *cook* with them. In this tutorial
+we treat HDC as a kitchen:
 
-Let's start by loading the package in question, as follows:
+| HDC concept        | Kitchen analogy                                         |
+|:-------------------|:-------------------------------------------------------|
+| Mapping ($\varphi$) | Turning an ingredient into a hypervector               |
+| Bundling ($\oplus$) | *Mixing* ingredients into a filling                    |
+| Binding ($\otimes$) | *Associating* an ingredient with a role                |
+| Permutation ($\rho$)| *Ordering* the steps of a recipe                        |
+| Similarity ($\delta$) | Asking *"are these two plates alike?"*               |
+
+Our running example is deliberately simple: we will "cook" a 🌮 **taco** and a 🍔 **hamburger**,
+and then add a third plate, a 🥪 **chicken club sandwich**, to see how the plates relate to each
+other. Let's start by loading the package:
 
 ````@example introduction-to-hdc
 using HyperdimensionalComputing
 ````
 
-# Creating hypervectors
+# Setting up our experiment
 
-First, we will create a random bipolar hypervector. This is done as follows:
+Before cooking, we pick the *vector-symbolic architecture* (VSA) we will work in -- that is, the
+flavour of hypervector. We use `BinaryHV`, the *binary spatter code* and arguably the most
+widely used VSA, and alias it to `H` so we can swap it out later just by changing one line:
 
 ````@example introduction-to-hdc
-BipolarHV()
+H = BinaryHV
 ````
 
-As you may see, by default the hypervector created has 10.000 dimensions. This is the default
-value in `HyperdimensionalComputing.jl`, but one can can create a hypervector of any given
-dimensionality by providing the size of this as an argument:
+Let's map a single object to see what a hypervector actually looks like:
 
 ````@example introduction-to-hdc
-BipolarHV(; D = 8)
+h = H("🥩")
 ````
 
-Alternatively, one can create a hypervector directly from a `Vector{T}` where `{T}` is an
-appropiate data type, e.g. integers for BipolarHV:
+It is just a long vector of *bits*. For `BinaryHV` each component is a `0` or a `1`:
 
 ````@example introduction-to-hdc
-BipolarHV(rand((-1, 1), 8))
+eltype(h)
 ````
 
-or you can directly pass any Julia structure to use it as a seed for the hypervector
-generation:
+...and there are a lot of them -- this is where the "hyper" comes from:
 
 ````@example introduction-to-hdc
-BipolarHV(:foo)
+length(h)
 ````
 
-Let's create 3 bipolar hypervector to use for the tutorial:
+!!! info "On hypervector types"
+    We aliased `H = BinaryHV`, but the package offers several flavours -- `BipolarHV`,
+    `TernaryHV`, `RealHV`, `GradedHV`, `GradedBipolarHV`, `FHRR` -- all sharing the abstract
+    type `AbstractHV`. Type `?AbstractHV` in the REPL to see them, or `?BinaryHV` for the one
+    we use here. Because everything below is written in terms of `H`, you can rerun the whole
+    tutorial in another VSA by changing that single alias. By default a hypervector has 10.000
+    dimensions; pass `D` to change it, e.g. `H("🥩"; D = 8)`.
+
+# Mapping: every ingredient is a hypervector
+
+The first rule of the HDC kitchen is *everything is a hypervector*. The mapping $\varphi$ takes
+any object -- a word, a number, or here an ingredient -- and assigns it a hypervector. In
+`HyperdimensionalComputing.jl` you can seed a hypervector from any Julia object, so we use the
+ingredient emojis themselves as seeds. Let's stock our pantry:
 
 ````@example introduction-to-hdc
-h₁ = BipolarHV(; D = 8)
-h₂ = BipolarHV(; D = 8)
-h₃ = BipolarHV(; D = 8);
+beef     = H("🥩")
+chicken  = H("🍗")
+turkey   = H("🦃")
+tortilla = H("🫓")
+bun      = H("🍔")
+bread    = H("🍞")
+onion    = H("🧅")
+lettuce  = H("🥬")
+salsa    = H("🌶️")
+tomato   = H("🍅")
+mayo     = H("🥚")
+cheese   = H("🧀")
+bacon    = H("🥓");
 nothing #hide
 ````
 
-The package has different hypervector types, such as `BipolarHV`, `TernaryHV`, `RealHV`,
-`GradedBipolarHV`, and `GradedHV`. All of this hypervectors have a common abstract type
-`AbstractHV` which can be used to build additional functions or encoding strategies (more on
-both later).
-
-!!! info "On (abstract) types"
-    All hypervectors implemented on `HyperdimensionalComputing.jl` can be found by checking the
-    docstrings for the `AbstractHV` (by typing `?AbstractHV` on the Julia REPL).
-
-    For more information on a specific hypervector type, the docstrings contain information on
-    the implementation, operations, similarity measurement and other technical
-    characteristics.
-
-# Fundamental operations with hypervectors
-
-HDC uses three primary operations that preserve the hyperdimensional properties and allow for
-the representation more complex structures:
-
-## Bundling
-
-Bundling (also known as superposition) combines multiple hypervectors to create a new hypervector
-that is similar to it's constituyents.
-
-$$u = [h_1 + h_2 + h_3]$$
-
-where $[...]$ denotes a potential normalization operations. In the case of bipolar
-hypervectors, this normalization operation is the `sign` function, which is defined as
-follows:
-
-$$\text{sign}(i) = \begin{cases}
-  +1 & \text{if } i > 0 \\
-  -1 & \text{if } i < 0 \\
-   0 & \text{otherwise }
-\end{cases}$$
-
-In HyperdimensionalComputing.jl, you can bundle hypervectors as follows:
+Seeding is deterministic (the same emoji always maps to the same hypervector), while *different*
+emojis map to essentially unrelated ("quasi-orthogonal") vectors. We can check this by comparing
+beef against a few ingredients at once. `similarity(beef)` returns a *function* that measures
+similarity to `beef`, which we broadcast over a list:
 
 ````@example introduction-to-hdc
-bundle([h₁, h₂, h₃])
+similarity(beef).([beef, cheese, onion])
 ````
 
-alternatively, you can use the `+` operator (which if overloaded for all `AbstractHV`):
+`BinaryHV` uses the **Jaccard** similarity, which runs from `0` to `1`. A hypervector is
+perfectly similar to itself (`1.0`), while two *unrelated* vectors share about a third of their
+set bits and so sit near a **baseline of ≈ 0.33** -- that is the "chance" level. Read the rest
+of the tutorial with that in mind: *similar* means "clearly above ~0.33", and *dissimilar* means
+"right around ~0.33." This reliable separation between related and random vectors is the bedrock
+the rest of HDC is built on.
+
+# The kitchen operations
+
+HDC has **three** primary operations. Each takes hypervectors and returns another hypervector of
+the same size, so results can be fed back in indefinitely -- this composability is what lets us
+build a whole plate out of a handful of ingredients.
+
+| Operation           | Purpose                    | Math                | In `HyperdimensionalComputing.jl` |
+|:--------------------|:---------------------------|:--------------------|:----------------------------------|
+| Bundling ($\oplus$) | *mix* into something alike  | $[\,h_1 + h_2 + \dots\,]$ | `bundle`, or the `+` operator |
+| Binding ($\otimes$) | *associate* into something new | $h_1 \otimes h_2$ (XOR for `BinaryHV`) | `bind` / `unbind`, or the `*` operator |
+| Permutation ($\rho$)| *order* by shuffling         | $\rho(h)$           | `ρ` (a.k.a. `shift`) |
+
+where $[\,\cdot\,]$ denotes a normalization step that keeps the result a valid hypervector.
+Let's meet them one at a time.
+
+## Bundling ($\oplus$): mixing
+
+**Bundling** (a.k.a. superposition) combines hypervectors into a new one that is *similar to all
+of its ingredients* -- think of tossing everything into one bowl. Let's mix a taco filling:
 
 ````@example introduction-to-hdc
-h₁ + h₂ + h₃
+filling = bundle([beef, onion, cheese])
 ````
 
-This operation generates a hypervector that is similar to all it's contituyent hypervectors,
-such that
-
-$$h₁ \sim u, h₂ \sim u, h₃ \sim u$$
-
-where $\sim$ means that the hypervectors are similar, i.e. they share more components than
-expected by chance.
-
-## Binding
-
-Binding combines multiple hypervectors to create a new hypervector that is dissimilar to it's
-constituyents, such that:
-
-$$v = [h₁ \times h₂ \times h₃]$$
-
-where $[...]$ represents a normalization procedure.
-
-In HyperdimensionalComputing.jl, you can bind hypervectors as follows:
+You can also use the overloaded `+` operator:
 
 ````@example introduction-to-hdc
-bind([h₁, h₂, h₃])
+filling == beef + onion + cheese
 ````
 
-alternatively, you can use the `*` operator (which if overloaded for all `AbstractHV`):
+The mix "remembers" what went into it: it is clearly similar to each of its ingredients, but not
+to something we never added (bread is a stranger to this bowl):
 
 ````@example introduction-to-hdc
-h₁ * h₂ * h₃
+similarity(filling).([beef, onion, cheese, bread])
 ````
 
-This operation generates a hypervector that is similar to all it's contituyent hypervectors,
-such that
+## Binding ($\otimes$): associating
 
-$$h₁ \nsim v, h₂ \nsim v, h₃ \nsim v$$
-
-where $\nsim$ means that the hypervectors are dissimilar, i.e. they are quasi-orthogonal.
-
-## Permutation
-
-Permutation (also known as shifting) is a special case of binding that creates a variant of a
-single hypervector via, generally speaking, a circular vector shifting with one or more
-positions.
-
-$$m = \rho(h₁)$$
+**Binding** combines hypervectors into a new one that is *dissimilar to its inputs*. It is the
+tool for **associating** things -- for saying "this ingredient plays *that* role." Let's define
+a `ROLE` hypervector and bind cheese to it:
 
 ````@example introduction-to-hdc
-h₄ = TernaryHV(collect(0:9))
-h₄.v
+ROLE = H(:role)
+topping = ROLE * cheese
 ````
+
+The resulting `topping` sits back at the ~0.33 baseline against both the role and the ingredient
+-- binding *hides* its operands, so `topping` looks unrelated to either:
 
 ````@example introduction-to-hdc
-ρ(h₄).v
+similarity(topping).([cheese, ROLE])
 ````
 
-The new hypervector will be, in principle, dissimilar to it's original version, such that:
-
-$$h_1 \nsim \rho(h_1) \nsim \rho\rho(h_1) \nsim \rho\rho(h_1) ...$$
-
-where $\nsim$ means that the hypervectors are dissimilar, i.e. they are quasi-orthogonal.
-
-In `HyperdimensionalComputing.jl`, one can shift hypervector as follows:
+Crucially, binding is *reversible*. For `BinaryHV` the bind is a bitwise **XOR**, which is its
+own inverse, so binding again with the role recovers the ingredient *exactly* (similarity `1.0`).
+This "unbinding" is what will later let us *query* a recipe:
 
 ````@example introduction-to-hdc
-ρ(h₁, 1)
+similarity(ROLE * topping, cheese)
 ````
+
+## Permutation ($\rho$): ordering
+
+**Permutation** ($\rho$) takes a single hypervector and cyclically shifts it into a new one that
+is dissimilar to the original. It is how HDC encodes *order* -- because in the kitchen, order
+matters (sear *then* simmer is not the same as simmer *then* sear):
 
 ````@example introduction-to-hdc
-h₁ != ρ(h₁, 1) != ρ(h₁, 2) != ρ(h₁, 3)
+similarity(beef, ρ(beef))
 ````
 
-## Similarity
-
-Althought technically not an operation, in order to retrieve information from hypervectors,
-we need to compare them using similarity/distance functions. `HyperdimensionalComputing.jl`
-provides a handy `similarity` function that accepts:
-
-2 hypervectors:
+Applying it repeatedly keeps producing fresh, quasi-orthogonal vectors, giving each position its
+own signature:
 
 ````@example introduction-to-hdc
-similarity(h₁, h₂)
+similarity(beef).([beef, ρ(beef, 1), ρ(beef, 2), ρ(beef, 3)])
 ````
 
-A vector of hypervectors:
+We can use this to make *order matter*. Encode a two-step recipe by permuting the second step
+once (position 0, then position 1), and compare it to the same steps performed in the opposite
+order:
 
 ````@example introduction-to-hdc
-similarity(h₁, h₁)
+sear = H(:sear)
+simmer = H(:simmer)
+
+similarity(sear + ρ(simmer), simmer + ρ(sear))
 ````
 
-or a hypervector and a vector of hypervectors:
+Same two actions, different order -- and the hypervectors come out unrelated.
+
+# Cooking a plate: encoding recipes
+
+We now combine the operations to "cook." There is no single right way to turn a list of
+ingredients into a plate hypervector -- the choice of *encoder* determines what the resulting
+vector remembers. The package ships several; here we compare three, from least to most
+structured, using a taco's ingredients:
 
 ````@example introduction-to-hdc
-similarity.(Ref(h₁), [h₁, h₂, h₃])
+ingredients = [tortilla, beef, onion, salsa, cheese]
 ````
 
-`δ` is a synonim of `similarity`, and can also be used to create a function for similarity
-comparison, e.g.
+**`multiset` -- an unordered bag** ($\oplus_i V_i$). It simply bundles the ingredients. It is
+the simplest encoder, but it forgets *everything* except which ingredients are present: shuffle
+them and you get the exact same vector.
 
 ````@example introduction-to-hdc
-f = δ(h₁)
+similarity(multiset(ingredients), multiset(reverse(ingredients)))
 ````
+
+**`bundlesequence` -- an ordered stack** ($\oplus_i \rho^{\,i-1}(V_i)$). It permutes each
+ingredient by its position before bundling, so *order is remembered*. Now reversing the stack
+gives an unrelated vector -- useful for layered dishes or recipe steps, where sequence matters:
 
 ````@example introduction-to-hdc
-f.([h₁, h₂, h₃])
+similarity(bundlesequence(ingredients), bundlesequence(reverse(ingredients)))
 ````
 
-## Encoding things as hypervectors
-
-The true power of HDC emerges when we combine the fundamental operations to encode complex data
-structures as hypervectors. By creatively applying bundling, binding, and shifting, we can
-represent virtually any type of information - from sequences and hierarchies to graphs and
-associative memories. The operations act as building blocks that can be composed in countless
-ways, limited only by our imagination and the specific requirements of our application. Let's
-explore some fundamental encoding strategies that demonstrate this flexibility.
-
-### Key-value pairs
-
-Animal hypervectors:
+**`hashtable` -- a keyed record** ($\oplus_i K_i \otimes V_i$). It binds each *value* to a *key*
+and bundles the pairs. This is the most structured of the three: order is irrelevant, but each
+ingredient is filed under the role it plays, so we can later *query it back*. Let's define our
+roles:
 
 ````@example introduction-to-hdc
-H_dog = TernaryHV(:dog)
-H_cat = TernaryHV(:cat)
-H_cow = TernaryHV(:cow)
-H_animals = [H_dog, H_cat, H_cow]
+BASE    = H(:base)      # the carb: tortilla, bun, bread...
+PROTEIN = H(:protein)   # beef, chicken, turkey...
+VEGGIE  = H(:veggie)    # onion, lettuce...
+SAUCE   = H(:sauce)     # salsa, ketchup, mayo...
+EXTRA   = H(:extra)     # cheese, bacon...
+roles = [BASE, PROTEIN, VEGGIE, SAUCE, EXTRA]
 ````
 
-Sound hypervectors:
+Our 🌮 **taco** -- a tortilla base, beef, onion, salsa, and a bit of cheese -- and our
+🍔 **hamburger** -- a bun, beef, lettuce, tomato, and cheese:
 
 ````@example introduction-to-hdc
-H_bark = TernaryHV(:bark)
-H_meow = TernaryHV(:meow)
-H_moo = TernaryHV(:moo)
-H_sounds = [H_bark, H_meow, H_moo]
+taco   = hashtable(roles, [tortilla, beef, onion, salsa, cheese])
+burger = hashtable(roles, [bun, beef, lettuce, tomato, cheese])
 ````
 
-Associative memory:
+Each plate is now a *single* hypervector encoding its whole (structured) recipe. The three
+encoders trade off resolving power against simplicity: `multiset` answers only *"what is in
+it?"*, `bundlesequence` also captures *"in what order?"*, and `hashtable` captures *"what plays
+which role?"* -- the one we need to reason about recipes.
+
+!!! tip "More encoders"
+    `multiset`, `bundlesequence`, and `hashtable` are just three of the built-in encoders. The
+    package also provides `multibind`, `bindsequence`, `ngrams`, `graph`, `crossproduct`, level
+    encoders, and more -- see the [API reference](../api.md) for the full catalogue.
+
+# Comparison: are two plates alike?
+
+With every plate living in the same space, we can reason about them in two complementary ways:
+by **measuring similarity** and by doing **algebra** on the hypervectors.
+
+## Measuring similarity
+
+Let's add a third plate, a 🥪 **club sandwich**. This one is interesting: its protein could be
+chicken *or* turkey. We express that ambiguity directly by **superposing** (bundling) the two
+poultry options into a single hypervector that is similar to both:
 
 ````@example introduction-to-hdc
-memory = (H_dog * H_bark) + (H_cat * H_meow) + (H_cow * H_moo);
-nothing #hide
+poultry = chicken + turkey
 ````
 
-!!! note
+The sandwich is then bread, that poultry, lettuce, mayo, and bacon:
 
 ````@example introduction-to-hdc
-#	  Alternatively you can use the `hashtable` encoder to achieve the same:
-
-memory == hashtable(H_animals, H_sounds)
+sandwich = hashtable(roles, [bread, poultry, lettuce, mayo, bacon])
 ````
 
-Querying memory to search for dog's sound:
+How close are the taco and the hamburger? The shared beef and cheese make them noticeably
+alike, while the sandwich shares only its lettuce with the burger and nothing with the taco:
 
 ````@example introduction-to-hdc
-nearest_neighbor(H_dog * memory, H_sounds)
+similarity(taco).([burger, sandwich])
 ````
 
-Querying memory to search which animals go "moo":
+We can look at all three plates at once with a similarity matrix (rows/columns are taco, burger,
+sandwich):
 
 ````@example introduction-to-hdc
-nearest_neighbor(H_moo * memory, H_animals)
+plates = [taco, burger, sandwich]
+similarity(plates)
 ````
 
-This is a very simple example, but you could think of having a more complex thing going on or
-having more animals that, for example, share sounds.
+The pattern matches culinary intuition: **taco and burger are the most alike** (shared beef +
+cheese), **burger and sandwich are mildly alike** (shared lettuce), and **taco and sandwich are
+strangers**. Similar recipes give similar vectors.
 
-### Sequences
+## Algebra: querying and mapping between plates
 
-**N-grams** represent sequences by encoding the order of elements. This is particularly useful for text processing where word order matters.
-
-Encode the phrases using the builtin `ngrams` encoder, with uses a sliding window of 3
-characters.
-
-Let's encode some phrases and then search for a specific word in them. First, the sentences
-list:
+Because binding is reversible, a plate is not a black box -- it is a little database we can
+query. Unbinding a plate with a *role* recovers the ingredient that filled it. We compare the
+result against the pantry with `nearest_neighbor`:
 
 ````@example introduction-to-hdc
-phrases = [
-    "the quick brown fox jumps over the lazy dog",
-    "the slick grown box bumps under the hazy fog",
-    "the thick known cox dumps inter the crazy cog",
-    "the brick shown pox lumps enter the glazy jog",
-    "the stick blown sox pumps winter the blazy log",
-];
-nothing #hide
+pantry = [tortilla, bun, bread, beef, chicken, turkey, onion, lettuce, salsa, tomato, mayo, cheese, bacon]
+names  = ["tortilla", "bun", "bread", "beef", "chicken", "turkey", "onion",
+          "lettuce", "salsa", "tomato", "mayo", "cheese", "bacon"]
+
+nearest_neighbor(taco * PROTEIN, pantry)
 ````
 
-Now, lets encode sentences using the characters as seed for our basis hypervectors and use n-gram
-encoding to represent the sentences as hypervectors:
+The result is a `(similarity, index, hypervector)` tuple pointing at the winning ingredient --
+here, the taco's protein is beef. Remember the sandwich's *ambiguous* protein? Querying it
+recovers **both** poultry options and rejects beef, exactly as the superposition intended:
 
 ````@example introduction-to-hdc
-encode(p::String) = map(c -> BinaryHV(c), collect(p)) |> ngrams
+similarity(sandwich * PROTEIN).([chicken, turkey, beef])
 ````
+
+Sweeping every role reconstructs the full menu straight from the plate hypervectors alone:
 
 ````@example introduction-to-hdc
-H_phrases = map(encode, phrases)
+recover(plate, role) = names[nearest_neighbor(plate * role, pantry)[2]]
+[recover(plate, role) for plate in plates, role in roles]
 ````
 
-Now that we have the sentence hypervectors, let's search for "crazy" in phrases:
+Each row is a plate, each column a role. Unbinding also works the other way around: give a plate
+an *ingredient* and it tells you the *role* that ingredient plays.
 
 ````@example introduction-to-hdc
-query = map(c -> BinaryHV(c), collect("crazy")) |> ngrams
+rolenames = ["BASE", "PROTEIN", "VEGGIE", "SAUCE", "EXTRA"]
+rolenames[argmax(similarity(taco * onion).(roles))]
 ````
+
+This two-way lookup lets us **map concepts from one dish to another**. Suppose we like the onion
+in our taco and ask: *"what plays the same part in the burger?"* We do it in two clean steps --
+first find onion's role in the taco, then read that role out of the burger:
 
 ````@example introduction-to-hdc
-nearest_neighbor(query, H_phrases)
+onion_role = roles[argmax(similarity(taco * onion).(roles))]   # onion is the taco's VEGGIE...
+recover(burger, onion_role)                                    # ...and the burger's VEGGIE is?
 ````
 
-Great! We correctly found that "crazy" is in phrase 3.
+The system answers `lettuce`: *onion is to the taco what lettuce is to the burger*. We have
+inferred an analogy the recipes never stated explicitly -- the kind of associative reasoning
+that makes hyperdimensional representations so powerful.
+
+# Wrap-up
+
+In one sitting we cooked three plates and met the whole HDC toolkit:
+
+- **Mapping** turned emojis into hypervectors.
+- **Bundling** mixed ingredients into a filling similar to its parts (and let a protein be
+  "chicken *or* turkey").
+- **Binding** associated ingredients with roles -- and let us un-associate them again.
+- **Permutation** let order matter.
+- Different **encoders** (`multiset`, `bundlesequence`, `hashtable`) remember different things.
+- **Similarity** told us which plates are alike, and **algebra** let us query recipes and map
+  concepts from one dish to another.
+
+The takeaways generalize far beyond the kitchen: all data lives in the *same* high-dimensional
+space, the representation is robust to noise thanks to the blessing of dimensionality, and
+hypervectors plus a handful of encoders can represent richly structured data. From here, take a
+look at the *"What's the Dollar of Mexico?"* example for more analogical reasoning, or the *Iris
+dataset* example for a full classification workflow.
 
 ---
 
