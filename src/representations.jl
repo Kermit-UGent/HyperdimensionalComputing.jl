@@ -8,12 +8,14 @@ See ext/UnicodePlotting.jl for extensions based on UnicodePlotting
 function Base.show(io::IO, ::MIME"text/plain", hvs::AbstractVector{<:AbstractHV})
     println(io, "$(length(hvs))-element $(typeof(hvs)):")
     r = map(hvs) do hv
-        if typeof(hv) == BinaryHV
-            counts = Dict(e => count(==(e), hv) for e in unique(hv))
-            " $(length(hv))-element $(typeof(hv)) with $(counts[true]) true and $(counts[false]) false"
-        elseif typeof(hv) == BipolarHV
-            counts = Dict(e => count(==(e), hv) for e in unique(hv))
-            " $(length(hv))-element $(typeof(hv)) with $(counts[1]) positives and $(counts[-1]) negatives"
+        if hv isa BinaryHV
+            ntrue = count(hv.v)
+            nfalse = length(hv) - ntrue
+            " $(length(hv))-element $(typeof(hv)) with $(ntrue) true and $(nfalse) false"
+        elseif hv isa BipolarHV
+            npos = count(hv.v)
+            nneg = length(hv) - npos
+            " $(length(hv))-element $(typeof(hv)) with $(npos) positives and $(nneg) negatives"
         elseif typeof(hv) == TernaryHV
             counts = Dict(1 => count(>=(1), hv), -1 => count(<=(-1), hv), 0 => count(==(0), hv))
             " $(length(hv))-element $(typeof(hv)) with $(counts[1]) positives, $(counts[0]) zeros, and $(counts[-1]) negatives"
@@ -22,28 +24,38 @@ function Base.show(io::IO, ::MIME"text/plain", hvs::AbstractVector{<:AbstractHV}
         end
     end
 
-    if length(r) <= displaysize(io)[1] - 4
+    rows = displaysize(io)[1]
+    if length(r) <= max(rows - 4, 0)
         return print(io, join(r, '\n'))
     end
 
-    chunksize = displaysize(io)[1] ÷ 2 - 3
+    chunksize = max(rows ÷ 2 - 3, 0)
+    if chunksize == 0
+        return print(io, " ⋮")
+    end
     return print(io, join([first(r, chunksize); " ⋮"; last(r, chunksize)], '\n'))
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hv::AbstractHV)
     # NOTE: Based off https://github.com/JuliaLang/julia/blob/cf40898d56a5b32c6a2e97f61355440df36a7357/base/arrayshow.jl#L363
     # Fast return for empty hypervectors
-    if isempty(hv) && (get(io, :compact, false)::Bool || hv isa AbstractHV)
-        return println(io, typeof(hv))
+    if isempty(hv)
+        if get(io, :compact, false)::Bool
+            return print(io, typeof(hv))
+        else
+            return println(io, "0-element $(typeof(hv)):")
+        end
     end
 
     # 1) show summary before setting :compact
-    if typeof(hv) == BinaryHV
-        counts = Dict(e => count(==(e), hv) for e in unique(hv))
-        print(io, "$(length(hv))-element $(typeof(hv)) with $(counts[true]) true and $(counts[false]) false")
-    elseif typeof(hv) == BipolarHV
-        counts = Dict(e => count(==(e), hv) for e in unique(hv))
-        print(io, "$(length(hv))-element $(typeof(hv)) with $(counts[1]) positives and $(counts[-1]) negatives")
+    if hv isa BinaryHV
+        ntrue = count(hv.v)
+        nfalse = length(hv) - ntrue
+        print(io, "$(length(hv))-element $(typeof(hv)) with $(ntrue) true and $(nfalse) false")
+    elseif hv isa BipolarHV
+        npos = count(hv.v)
+        nneg = length(hv) - npos
+        print(io, "$(length(hv))-element $(typeof(hv)) with $(npos) positives and $(nneg) negatives")
     elseif typeof(hv) == TernaryHV
         counts = Dict(1 => count(>=(1), hv), -1 => count(<=(-1), hv), 0 => count(==(0), hv))
         print(io, "$(length(hv))-element $(typeof(hv)) with $(counts[1]) positives, $(counts[0]) zeros, and $(counts[-1]) negatives")
