@@ -38,6 +38,10 @@
 
         @test similarity(x, y) ≈ sim_cos(x.v, y.v) ≈ dot(xd, yd) / norm(xd) / norm(yd)
         @test similarity(x, y) == δ(x)(y)
+
+        z = TernaryHV{Int8}(vcat(fill(Int8(1), 150), fill(Int8(-1), 150)))
+        @test similarity(z, z) ≈ 1
+        @test similarity(z.v, z.v; method = :cosine) ≈ 1
     end
 
     @testset "GradedBipolarHV" begin

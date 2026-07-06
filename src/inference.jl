@@ -9,6 +9,11 @@ LinearAlgebra.dot(u::AbstractHV, v::AbstractHV) = dot(u.v, v.v)
 LinearAlgebra.dot(u::BipolarHV, v::BipolarHV) = 4dot(u.v, v.v) - 2sum(u.v) - 2sum(v.v) + length(u)
 
 sim_cos(u::AbstractVector, v::AbstractVector) = dot(u, v) / (norm(u) * norm(v))
+sim_cos(u::AbstractVector{<:Integer}, v::AbstractVector{<:Integer}) = begin
+    u64 = Int64.(u)
+    v64 = Int64.(v)
+    dot(u64, v64) / (norm(u64) * norm(v64))
+end
 
 sim_jacc(u::AbstractVector, v::AbstractVector) = dot(u, v) / sum(ui + vi - ui * vi for (ui, vi) in zip(u, v))
 
