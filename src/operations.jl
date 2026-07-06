@@ -91,13 +91,23 @@ end
 # ------
 
 # binary and bipolar: use majority
-function bundle(hvr::Union{BinaryHV, BipolarHV}, hdvs, r)
+#
+# When an even number of hypervectors is bundled, positions with an equal number
+# of votes for each state are ties that have to be resolved. To keep bundling
+# deterministic (identical inputs always yield the same result) while avoiding
+# the positional bias a fixed per-index rule would introduce, ties are broken
+# with a local RNG seeded from the aggregated votes `r`, which depends on every
+# input hypervector. Pass `rng` to override the seed (e.g. reproducible draws
+# from a caller-controlled stream), or `rng = Random.default_rng()` to recover
+# the previous, non-deterministic behaviour.
+function bundle(hvr::Union{BinaryHV, BipolarHV}, hdvs, r; rng::Union{Nothing, AbstractRNG} = nothing)
     m = length(hdvs)
     for hv in hdvs
         r .+= hv.v
     end
     if iseven(m)  # break ties
-        r .+= bitrand(length(r))
+        tie_rng = isnothing(rng) ? Xoshiro(hash(r)) : rng
+        r .+= bitrand(tie_rng, length(r))
     end
     hvr = similar(hvr)
     hvr.v .= r .> m / 2
@@ -152,7 +162,7 @@ end
 function bundle(hdvs; kwargs...)
     hv = first(hdvs)
     r = empty_vector(hv)
-    return bundle(hv, hdvs, r, kwargs...)
+    return bundle(hv, hdvs, r; kwargs...)
 end
 
 Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bundle((hv1, hv2))
