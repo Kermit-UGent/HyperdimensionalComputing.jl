@@ -7,7 +7,7 @@ CurrentModule = HyperdimensionalComputing
 This page contains the complete API reference for HyperdimensionalComputing.jl.
 
 ## Types
-@docs```
+```@docs
 AbstractHV
 BinaryHV
 BipolarHV
@@ -18,7 +18,7 @@ GradedHV
 ```
 
 ## Operations
-@docs```
+```@docs
 bundle
 bind
 shift!
@@ -30,14 +30,14 @@ perturbate!
 ```
 
 ## Inference
-@docs```
+```@docs
 similarity
 δ
 nearest_neighbor
 ```
 
 ## Encoders
-@docs```
+```@docs
 multiset
 multibind
 bundlesequence
