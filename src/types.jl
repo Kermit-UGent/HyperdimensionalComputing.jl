@@ -31,7 +31,8 @@ Base.size(hv::AbstractHV) = size(hv.v)
 Base.sum(hv::AbstractHV) = sum(hv.v)
 
 LinearAlgebra.norm(hv::AbstractHV) = norm(hv.v)
-LinearAlgebra.normalize!(hv::AbstractHV) = hv
+normalize!(hv::AbstractHV) = hv
+normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 
 eldist(hv::AbstractHV) = eldist(typeof(hv))
 empty_vector(hv::AbstractHV) = zero(hv.v)
@@ -43,6 +44,7 @@ struct BipolarHV <: AbstractHV{Int}
     BipolarHV(v::AbstractVector{Bool}) = new(v)
 end
 
+# Outer constructors
 function BipolarHV(;
         D::Integer = 10_000,
         seed::Union{Integer, Nothing} = nothing,
@@ -137,9 +139,9 @@ end
 # Helpers
 Base.copy(hv::TernaryHV{T}) where {T} = TernaryHV{T}(copy(hv.v))
 Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D = length(hv))
-LinearAlgebra.normalize!(hv::TernaryHV) = clamp!(hv.v, -1, 1)
-LinearAlgebra.normalize(hv::TernaryHV{T}) where {T} = TernaryHV{T}(clamp.(hv.v, -1, 1))
+normalize!(hv::TernaryHV) = clamp!(hv.v, -1, 1)
 eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
+
 # ------------------------------------------------------------------------------------ BinaryHV
 """
     BinaryHV
@@ -198,6 +200,7 @@ struct RealHV{T <: Real} <: AbstractHV{T}
     ) where {T <: Real} = new{T}(v, distr)
 end
 
+# Constructors
 function RealHV(;
         distr::Distribution = eldist(RealHV),
         D::Integer = 10_000,
@@ -239,6 +242,7 @@ struct GradedHV{T <: Real} <: AbstractHV{T}
     ) where {T <: Real} = new{T}(clamp.(v, 0, 1), distr)
 end
 
+# Constructors
 function GradedHV(;
         D::Integer = 10_000,
         distr::Distribution = eldist(GradedHV),
@@ -265,7 +269,7 @@ end
 Base.copy(hv::GradedHV) = GradedHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedHV) = GradedHV(; D = length(hv), distr = hv.distr)
 Base.zeros(hv::GradedHV) = fill!(similar(hv.v), one(eltype(hv.v)) / 2)
-LinearAlgebra.normalize!(hv::GradedHV) = clamp!(hv.v, 0, 1)
+normalize!(hv::GradedHV) = clamp!(hv.v, 0, 1)
 eldist(::Type{<:GradedHV}) = Beta(1, 1)
 empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
@@ -306,7 +310,7 @@ end
 # Helpers
 Base.copy(hv::GradedBipolarHV) = GradedBipolarHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D = length(hv), distr = hv.distr)
-LinearAlgebra.normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
+normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
 # Fourier Holographic Reduced Representations
@@ -333,12 +337,11 @@ end
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))
 
 """
-    LinearAlgebra.normalize!(hv::FHRR)
+    normalize!(hv::FHRR)
 
-A Fourier Holographic Reduced Representation is normalized by
-setting the norm of each complex element to 1.
+A Fourier Holographic Reduced Representation is normalized by setting the norm of each complex element to 1.
 """
-function LinearAlgebra.normalize!(hv::FHRR)
+function normalize!(hv::FHRR)
     hv.v ./= abs.(hv.v)
     return hv
 end
