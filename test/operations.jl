@@ -1,7 +1,7 @@
-using LinearAlgebra, Random
+using Random
 
+Random.seed!(42)
 @testset "operations" begin
-
     hv_types = [
         BinaryHV, BipolarHV, RealHV, TernaryHV,
         GradedHV, GradedBipolarHV,

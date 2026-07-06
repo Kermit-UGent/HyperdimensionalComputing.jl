@@ -2,7 +2,7 @@ const n = 100
 const s = :test
 const hash_s = hash(s)
 
-using Distributions, LinearAlgebra
+using Distributions
 
 @testset "types" begin
     @testset "BipolarHV" begin
