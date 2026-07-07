@@ -2,47 +2,36 @@
 EditURL = "introduction-to-hdc.jl"
 ```
 
-# Introduction to Hyperdimensional Computing (the HDC kitchen)
+# Introduction to Hyperdimensional Computing
 
 Hyperdimensional Computing (HDC) is a brain-inspired computational paradigm that represents
 and manipulates information using high-dimensional vectors called **hypervectors**. These
 vectors typically have thousands of dimensions (often 1.000-10.000), making them
 "hyperdimensional." The key insight is that high-dimensional spaces have unusual mathematical
-properties that allow for robust, fault-tolerant computation.
+properties that allow for robust, fault-tolerant computation based on a defined set of
+operations that enable representing any object or structure as a hypervector.
 
-Rather than listing those properties in the abstract, let's *cook* with them. In this tutorial
-we treat HDC as a kitchen:
-
-| HDC concept        | Kitchen analogy                                         |
-|:-------------------|:-------------------------------------------------------|
-| Mapping ($\varphi$) | Turning an ingredient into a hypervector               |
-| Bundling ($\oplus$) | *Mixing* ingredients into a filling                    |
-| Binding ($\otimes$) | *Associating* an ingredient with a role                |
-| Permutation ($\rho$)| *Ordering* the steps of a recipe                        |
-| Similarity ($\delta$) | Asking *"are these two plates alike?"*               |
-
-Our running example is deliberately simple: we will "cook" a 🌮 **taco** and a 🍔 **hamburger**,
-and then add a third plate, a 🥪 **chicken club sandwich**, to see how the plates relate to each
-other. Let's start by loading the package:
-
-````@example introduction-to-hdc
-using HyperdimensionalComputing
-````
+Our running example is deliberately simple: we will "cook" a set of plates using hypervectors,
+showcase how to compare them, and finally how to do some inference using algebraic operations
+over our "food" hypervectors.
 
 # Setting up our experiment
 
-Before cooking, we pick the *vector-symbolic architecture* (VSA) we will work in -- that is, the
-flavour of hypervector. We use `BinaryHV`, the *binary spatter code* and arguably the most
-widely used VSA, and alias it to `H` so we can swap it out later just by changing one line:
+First of all, we need to define the nature of our hypervectors. For this, we pick with
+*vector-symbolic architecture* (VSA) we will work in. This is, essentially, the flavour of
+hypervectors we will work with. For tutorial sake, we will use `BinaryHV`, the *binary spatter
+code* and arguably the most widely used VSA.
 
 ````@example introduction-to-hdc
+using HyperdimensionalComputing
+
 H = BinaryHV
 ````
 
-Let's map a single object to see what a hypervector actually looks like:
+Let's create a hypervector to see what one actually looks like:
 
 ````@example introduction-to-hdc
-h = H("🥩")
+h = H()
 ````
 
 It is just a long vector of *bits*. For `BinaryHV` each component is a `0` or a `1`:
@@ -63,39 +52,49 @@ length(h)
     type `AbstractHV`. Type `?AbstractHV` in the REPL to see them, or `?BinaryHV` for the one
     we use here. Because everything below is written in terms of `H`, you can rerun the whole
     tutorial in another VSA by changing that single alias. By default a hypervector has 10.000
-    dimensions; pass `D` to change it, e.g. `H("🥩"; D = 8)`.
+    dimensions; pass `D` to change it, e.g. `H(; D = 8)`.
 
-# Mapping: every ingredient is a hypervector
+Now, let's go over each operation we need to "cook" with hypervectors:
 
-The first rule of the HDC kitchen is *everything is a hypervector*. The mapping $\varphi$ takes
-any object -- a word, a number, or here an ingredient -- and assigns it a hypervector. In
-`HyperdimensionalComputing.jl` you can seed a hypervector from any Julia object, so we use the
-ingredient emojis themselves as seeds. Let's stock our pantry:
+## Mapping ($\varphi$): _every ingredient is a hypervector_
+
+The first rule of HDC is that *everything is a hypervector*. The mapping $\varphi$ takes any
+object -- a word, a number, or here an ingredient -- and assigns it a hypervector. The simplest
+mapping just draws a fresh random hypervector for each item. Let's stock our pantry, giving every
+ingredient its own random hypervector named (for fun) with its emoji:
 
 ````@example introduction-to-hdc
-beef     = H("🥩")
-chicken  = H("🍗")
-turkey   = H("🦃")
-tortilla = H("🫓")
-bun      = H("🍔")
-bread    = H("🍞")
-onion    = H("🧅")
-lettuce  = H("🥬")
-salsa    = H("🌶️")
-tomato   = H("🍅")
-mayo     = H("🥚")
-cheese   = H("🧀")
-bacon    = H("🥓");
+🥓 = H()  # bacon
+🥩 = H()  # beef
+🍞 = H()  # bread
+🍔 = H()  # bun
+🧀 = H()  # cheese
+🍗 = H()  # chicken
+🥬 = H()  # lettuce
+🥚 = H()  # mayo
+🧅 = H()  # onion
+🌶️ = H()  # salsa
+🍅 = H()  # tomato
+🫓 = H()  # tortilla
+🦃 = H(); # turkey
 nothing #hide
 ````
 
-Seeding is deterministic (the same emoji always maps to the same hypervector), while *different*
-emojis map to essentially unrelated ("quasi-orthogonal") vectors. We can check this by comparing
-beef against a few ingredients at once. `similarity(beef)` returns a *function* that measures
-similarity to `beef`, which we broadcast over a list:
+!!! tip "Seeding hypervectors"
+    Each ingredient above is an *independent random draw*, so the exact numbers throughout this
+    tutorial will differ every time you run it. When you instead need **reproducible** vectors --
+    or want the same object to always map to the same hypervector (e.g. so the token `"🥩"` maps
+    to one fixed vector everywhere in a pipeline) -- you can *seed* a hypervector from any Julia
+    object by passing it to the constructor: `H("🥩")`, `H(:beef)`, and `H(42)` each return a
+    vector fully determined by their seed.
+
+Because each ingredient is an independent random draw, *different* ingredients are essentially
+unrelated ("quasi-orthogonal"). We can check this by comparing 🥩 against a few ingredients at
+once. `similarity(🥩)` returns a *function* that measures similarity to 🥩, which we broadcast
+over a list:
 
 ````@example introduction-to-hdc
-similarity(beef).([beef, cheese, onion])
+similarity(🥩).([🥩, 🧀, 🧅])
 ````
 
 `BinaryHV` uses the **Jaccard** similarity, which runs from `0` to `1`. A hypervector is
@@ -126,20 +125,20 @@ Let's meet them one at a time.
 of its ingredients* -- think of tossing everything into one bowl. Let's mix a taco filling:
 
 ````@example introduction-to-hdc
-filling = bundle([beef, onion, cheese])
+filling = bundle([🥩, 🧅, 🧀])
 ````
 
 You can also use the overloaded `+` operator:
 
 ````@example introduction-to-hdc
-filling == beef + onion + cheese
+filling == 🥩 + 🧅 + 🧀
 ````
 
 The mix "remembers" what went into it: it is clearly similar to each of its ingredients, but not
 to something we never added (bread is a stranger to this bowl):
 
 ````@example introduction-to-hdc
-similarity(filling).([beef, onion, cheese, bread])
+similarity(filling).([🥩, 🧅, 🧀, 🍞])
 ````
 
 ## Binding ($\otimes$): associating
@@ -150,14 +149,14 @@ a `ROLE` hypervector and bind cheese to it:
 
 ````@example introduction-to-hdc
 ROLE = H(:role)
-topping = ROLE * cheese
+topping = ROLE * 🧀
 ````
 
 The resulting `topping` sits back at the ~0.33 baseline against both the role and the ingredient
 -- binding *hides* its operands, so `topping` looks unrelated to either:
 
 ````@example introduction-to-hdc
-similarity(topping).([cheese, ROLE])
+similarity(topping).([🧀, ROLE])
 ````
 
 Crucially, binding is *reversible*. For `BinaryHV` the bind is a bitwise **XOR**, which is its
@@ -165,7 +164,7 @@ own inverse, so binding again with the role recovers the ingredient *exactly* (s
 This "unbinding" is what will later let us *query* a recipe:
 
 ````@example introduction-to-hdc
-similarity(ROLE * topping, cheese)
+similarity(ROLE * topping, 🧀)
 ````
 
 ## Permutation ($\rho$): ordering
@@ -175,14 +174,14 @@ is dissimilar to the original. It is how HDC encodes *order* -- because in the k
 matters (sear *then* simmer is not the same as simmer *then* sear):
 
 ````@example introduction-to-hdc
-similarity(beef, ρ(beef))
+similarity(🥩, ρ(🥩))
 ````
 
 Applying it repeatedly keeps producing fresh, quasi-orthogonal vectors, giving each position its
 own signature:
 
 ````@example introduction-to-hdc
-similarity(beef).([beef, ρ(beef, 1), ρ(beef, 2), ρ(beef, 3)])
+similarity(🥩).([🥩, ρ(🥩, 1), ρ(🥩, 2), ρ(🥩, 3)])
 ````
 
 We can use this to make *order matter*. Encode a two-step recipe by permuting the second step
@@ -206,7 +205,7 @@ vector remembers. The package ships several; here we compare three, from least t
 structured, using a taco's ingredients:
 
 ````@example introduction-to-hdc
-ingredients = [tortilla, beef, onion, salsa, cheese]
+ingredients = [🫓, 🥩, 🧅, 🌶️, 🧀]
 ````
 
 **`multiset` -- an unordered bag** ($\oplus_i V_i$). It simply bundles the ingredients. It is
@@ -231,11 +230,11 @@ ingredient is filed under the role it plays, so we can later *query it back*. Le
 roles:
 
 ````@example introduction-to-hdc
-BASE    = H(:base)      # the carb: tortilla, bun, bread...
+BASE = H(:base)      # the carb: tortilla, bun, bread...
 PROTEIN = H(:protein)   # beef, chicken, turkey...
-VEGGIE  = H(:veggie)    # onion, lettuce...
-SAUCE   = H(:sauce)     # salsa, ketchup, mayo...
-EXTRA   = H(:extra)     # cheese, bacon...
+VEGGIE = H(:veggie)    # onion, lettuce...
+SAUCE = H(:sauce)     # salsa, ketchup, mayo...
+EXTRA = H(:extra)     # cheese, bacon...
 roles = [BASE, PROTEIN, VEGGIE, SAUCE, EXTRA]
 ````
 
@@ -243,8 +242,8 @@ Our 🌮 **taco** -- a tortilla base, beef, onion, salsa, and a bit of cheese --
 🍔 **hamburger** -- a bun, beef, lettuce, tomato, and cheese:
 
 ````@example introduction-to-hdc
-taco   = hashtable(roles, [tortilla, beef, onion, salsa, cheese])
-burger = hashtable(roles, [bun, beef, lettuce, tomato, cheese])
+taco = hashtable(roles, [🫓, 🥩, 🧅, 🌶️, 🧀])
+burger = hashtable(roles, [🍔, 🥩, 🥬, 🍅, 🧀])
 ````
 
 Each plate is now a *single* hypervector encoding its whole (structured) recipe. The three
@@ -269,13 +268,13 @@ chicken *or* turkey. We express that ambiguity directly by **superposing** (bund
 poultry options into a single hypervector that is similar to both:
 
 ````@example introduction-to-hdc
-poultry = chicken + turkey
+poultry = 🍗 + 🦃
 ````
 
 The sandwich is then bread, that poultry, lettuce, mayo, and bacon:
 
 ````@example introduction-to-hdc
-sandwich = hashtable(roles, [bread, poultry, lettuce, mayo, bacon])
+sandwich = hashtable(roles, [🍞, poultry, 🥬, 🥚, 🥓])
 ````
 
 How close are the taco and the hamburger? The shared beef and cheese make them noticeably
@@ -304,9 +303,11 @@ query. Unbinding a plate with a *role* recovers the ingredient that filled it. W
 result against the pantry with `nearest_neighbor`:
 
 ````@example introduction-to-hdc
-pantry = [tortilla, bun, bread, beef, chicken, turkey, onion, lettuce, salsa, tomato, mayo, cheese, bacon]
-names  = ["tortilla", "bun", "bread", "beef", "chicken", "turkey", "onion",
-          "lettuce", "salsa", "tomato", "mayo", "cheese", "bacon"]
+pantry = [🫓, 🍔, 🍞, 🥩, 🍗, 🦃, 🧅, 🥬, 🌶️, 🍅, 🥚, 🧀, 🥓]
+names = [
+    "tortilla", "bun", "bread", "beef", "chicken", "turkey", "onion",
+    "lettuce", "salsa", "tomato", "mayo", "cheese", "bacon",
+]
 
 nearest_neighbor(taco * PROTEIN, pantry)
 ````
@@ -316,7 +317,7 @@ here, the taco's protein is beef. Remember the sandwich's *ambiguous* protein? Q
 recovers **both** poultry options and rejects beef, exactly as the superposition intended:
 
 ````@example introduction-to-hdc
-similarity(sandwich * PROTEIN).([chicken, turkey, beef])
+similarity(sandwich * PROTEIN).([🍗, 🦃, 🥩])
 ````
 
 Sweeping every role reconstructs the full menu straight from the plate hypervectors alone:
@@ -331,7 +332,7 @@ an *ingredient* and it tells you the *role* that ingredient plays.
 
 ````@example introduction-to-hdc
 rolenames = ["BASE", "PROTEIN", "VEGGIE", "SAUCE", "EXTRA"]
-rolenames[argmax(similarity(taco * onion).(roles))]
+rolenames[argmax(similarity(taco * 🧅).(roles))]
 ````
 
 This two-way lookup lets us **map concepts from one dish to another**. Suppose we like the onion
@@ -339,7 +340,7 @@ in our taco and ask: *"what plays the same part in the burger?"* We do it in two
 first find onion's role in the taco, then read that role out of the burger:
 
 ````@example introduction-to-hdc
-onion_role = roles[argmax(similarity(taco * onion).(roles))]   # onion is the taco's VEGGIE...
+onion_role = roles[argmax(similarity(taco * 🧅).(roles))]   # 🧅 is the taco's VEGGIE...
 recover(burger, onion_role)                                    # ...and the burger's VEGGIE is?
 ````
 
