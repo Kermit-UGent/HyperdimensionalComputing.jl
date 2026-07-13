@@ -126,11 +126,11 @@ function bundle(hdvs; kwargs...)
 end
 
 """
-    Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV}
+    Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV}
 
 Alias to [`bundle`](@ref)
 """
-Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bundle((hv1, hv2))
+Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
 
 # BINDING
 # -------

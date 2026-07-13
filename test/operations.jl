@@ -22,18 +22,16 @@ Random.seed!(42)
             @testset "bundle $HV" begin
                 @test bundle((hv1, hv2)) isa HV
                 @test bundle([hv1, hv2]) isa HV
-                @test bundle((HV(N) for i in 1:5)) isa HV
+                @test bundle((HV(i; D = N) for i in 1:5)) isa HV
                 @test hv1 + hv2 isa HV
+                @test +((HV(i; D = N) for i in 1:5)...) isa HV
+                @test +((HV(i; D = N) for i in 1:5)...) == bundle((HV(i; D = N) for i in 1:5))
 
-                # Bundling must be deterministic for identical inputs, including
-                # the even-count tie-breaking case (see issue #47).
                 if HV <: Union{BinaryHV, BipolarHV}
                     @test (hv1 + hv2).v == (hv1 + hv2).v
                     @test bundle([hv1, hv2]).v == bundle([hv1, hv2]).v
-                    # even count -> ties are broken; odd count -> no ties
                     hv3 = HV(; D = N)
                     @test bundle([hv1, hv2, hv3]).v == bundle([hv1, hv2, hv3]).v
-                    # a caller-supplied rng reproduces its own draws
                     @test bundle([hv1, hv2]; rng = MersenneTwister(1)).v ==
                         bundle([hv1, hv2]; rng = MersenneTwister(1)).v
                 end
@@ -42,7 +40,9 @@ Random.seed!(42)
             @testset "bind $HV" begin
                 @test bind(hv1, hv2) isa HV
                 @test bind([hv1, hv2]) isa HV
-                @test bind([HV(N) for i in 1:5]) isa HV
+                @test bind([HV(i; D = N) for i in 1:5]) isa HV
+                @test *([HV(i; D = N) for i in 1:5]...) isa HV
+                @test bind([HV(i; D = N) for i in 1:5]) == *([HV(i; D = N) for i in 1:5]...) isa HV
                 @test hv1 * hv2 isa HV
             end
 
