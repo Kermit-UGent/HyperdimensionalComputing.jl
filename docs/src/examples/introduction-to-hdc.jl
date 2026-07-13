@@ -1,3 +1,4 @@
+using Random #hide
 # # Introduction to Hyperdimensional Computing
 #
 # Hyperdimensional Computing (HDC) is a brain-inspired computational paradigm that represents
@@ -42,9 +43,12 @@ length(h)
 #     tutorial in another VSA by changing that single alias. By default a hypervector has 10.000
 #     dimensions; pass `D` to change it, e.g. `H(; D = 8)`.
 #
-# Now, let's go over each operation we need to "cook" with hypervectors:
+# ## Operations
 #
-# ## Mapping ($\varphi$): _every ingredient is a hypervector_
+# Now that we have defined the nature of the hypervectors we will work with, let's go over each
+# operation we have available to "cook" with hypervectors:
+#
+# ### Mapping $\varphi$: _every ingredient is a hypervector_
 #
 # The first rule of HDC is that *everything is a hypervector*. The mapping $\varphi$ takes any
 # object -- a word, a number, or here an ingredient -- and assigns it a hypervector. The simplest
@@ -67,45 +71,35 @@ length(h)
 
 # !!! tip "Seeding hypervectors"
 #     Each ingredient above is an *independent random draw*, so the exact numbers throughout this
-#     tutorial will differ every time you run it. When you instead need **reproducible** vectors --
+#     tutorial will differ every time you run it. When you instead need **reproducible** vectors
 #     or want the same object to always map to the same hypervector (e.g. so the token `"🥩"` maps
-#     to one fixed vector everywhere in a pipeline) -- you can *seed* a hypervector from any Julia
-#     object by passing it to the constructor: `H("🥩")`, `H(:beef)`, and `H(42)` each return a
-#     vector fully determined by their seed.
+#     to one fixed vector everywhere in a pipeline), you can *seed* a hypervector from any Julia
+#     object by passing it to the constructor. Additional constructors are available per
+#     hypervector type, which can be looked up in the API or in docstrings.
+#
+# ## Similarity $\delta$: _are ingredients similar?_
+#
+# Inference with hypervectors is based on comparing them, therefore we need some way of
+# achieving this. Each VSA defines a similarity or distance measurement to assess how similar
+# are hypervectors between each other.
 #
 # Because each ingredient is an independent random draw, *different* ingredients are essentially
-# unrelated ("quasi-orthogonal"). We can check this by comparing 🥩 against a few ingredients at
+# unrelated ("quasi-orthogonal"). We can check this by comparing beef against a few ingredients at
 # once. `similarity(🥩)` returns a *function* that measures similarity to 🥩, which we broadcast
 # over a list:
 
 similarity(🥩).([🥩, 🧀, 🧅])
 
+
 # `BinaryHV` uses the **Jaccard** similarity, which runs from `0` to `1`. A hypervector is
 # perfectly similar to itself (`1.0`), while two *unrelated* vectors share about a third of their
-# set bits and so sit near a **baseline of ≈ 0.33** -- that is the "chance" level. Read the rest
-# of the tutorial with that in mind: *similar* means "clearly above ~0.33", and *dissimilar* means
-# "right around ~0.33." This reliable separation between related and random vectors is the bedrock
-# the rest of HDC is built on.
-
-# # The kitchen operations
+# set bits and so sit near a **baseline of ≈ 0.33**.
 #
-# HDC has **three** primary operations. Each takes hypervectors and returns another hypervector of
-# the same size, so results can be fed back in indefinitely -- this composability is what lets us
-# build a whole plate out of a handful of ingredients.
 #
-# | Operation           | Purpose                    | Math                | In `HyperdimensionalComputing.jl` |
-# |:--------------------|:---------------------------|:--------------------|:----------------------------------|
-# | Bundling ($\oplus$) | *mix* into something alike  | $[\,h_1 + h_2 + \dots\,]$ | `bundle`, or the `+` operator |
-# | Binding ($\otimes$) | *associate* into something new | $h_1 \otimes h_2$ (XOR for `BinaryHV`) | `bind` / `unbind`, or the `*` operator |
-# | Permutation ($\rho$)| *order* by shuffling         | $\rho(h)$           | `ρ` (a.k.a. `shift`) |
+# ### Bundling $\oplus$: _mixing_
 #
-# where $[\,\cdot\,]$ denotes a normalization step that keeps the result a valid hypervector.
-# Let's meet them one at a time.
-#
-# ## Bundling ($\oplus$): mixing
-#
-# **Bundling** (a.k.a. superposition) combines hypervectors into a new one that is *similar to all
-# of its ingredients* -- think of tossing everything into one bowl. Let's mix a taco filling:
+# Bundling (a.k.a. superposition) combines hypervectors into a new one that is *similar to all
+# of its ingredients*, think of tossing everything into one bowl. Let's mix a taco filling:
 
 filling = bundle([🥩, 🧅, 🧀])
 
@@ -113,35 +107,35 @@ filling = bundle([🥩, 🧅, 🧀])
 
 filling == 🥩 + 🧅 + 🧀
 
-# The mix "remembers" what went into it: it is clearly similar to each of its ingredients, but not
+# The operation "remembers" what went into it: it is clearly similar to each of its ingredients, but not
 # to something we never added (bread is a stranger to this bowl):
 
 similarity(filling).([🥩, 🧅, 🧀, 🍞])
 
-# ## Binding ($\otimes$): associating
+# ### Binding $\otimes$: _associating_ 
 #
-# **Binding** combines hypervectors into a new one that is *dissimilar to its inputs*. It is the
-# tool for **associating** things -- for saying "this ingredient plays *that* role." Let's define
-# a `ROLE` hypervector and bind cheese to it:
+# Binding combines hypervectors into a new one that is *dissimilar to its inputs*. It is the
+# tool for associating hypervectors to create new concepts. Let's define a `ROLE` hypervector
+# and bind cheese to it:
 
 ROLE = H(:role)
 topping = ROLE * 🧀
 
-# The resulting `topping` sits back at the ~0.33 baseline against both the role and the ingredient
-# -- binding *hides* its operands, so `topping` looks unrelated to either:
+# The resulting `topping` sits back at the ~0.33 baseline against both the role and the ingredient,
+# binding *hides* its operands, so `topping` looks unrelated to either:
 
 similarity(topping).([🧀, ROLE])
 
-# Crucially, binding is *reversible*. For `BinaryHV` the bind is a bitwise **XOR**, which is its
-# own inverse, so binding again with the role recovers the ingredient *exactly* (similarity `1.0`).
+# Notably, binding is *reversible* in some VSAs. For `BinaryHV` the bind is a bitwise **XOR**, which
+# is its own inverse, so binding again with the role recovers the ingredient *exactly* (similarity `1.0`).
 # This "unbinding" is what will later let us *query* a recipe:
 
 similarity(ROLE * topping, 🧀)
 
-# ## Permutation ($\rho$): ordering
+# ## Permutation $\rho$: _ordering_
 #
-# **Permutation** ($\rho$) takes a single hypervector and cyclically shifts it into a new one that
-# is dissimilar to the original. It is how HDC encodes *order* -- because in the kitchen, order
+# Permutation takes a hypervector and cyclically shifts it into a new one that
+# is dissimilar to the original. It is how HDC encodes order, e.g. because in the kitchen, order
 # matters (sear *then* simmer is not the same as simmer *then* sear):
 
 similarity(🥩, ρ(🥩))
@@ -151,48 +145,59 @@ similarity(🥩, ρ(🥩))
 
 similarity(🥩).([🥩, ρ(🥩, 1), ρ(🥩, 2), ρ(🥩, 3)])
 
-# We can use this to make *order matter*. Encode a two-step recipe by permuting the second step
-# once (position 0, then position 1), and compare it to the same steps performed in the opposite
-# order:
+#  We can use this to encode order or hierarchy, as this produces an alternative version of our original
+#  hypervector. Encode a two-step recipe by permuting the second step
+#  once (position 0, then position 1), and compare it to the same steps performed in the opposite
+#  order:
 
 sear = H(:sear)
 simmer = H(:simmer)
 
 similarity(sear + ρ(simmer), simmer + ρ(sear))
 
-# Same two actions, different order -- and the hypervectors come out unrelated.
+# Same two actions but with different order. Hypervectors come out unrelated.
 #
-# # Cooking a plate: encoding recipes
+# ## Encoding: _cooking a plate_
 #
 # We now combine the operations to "cook." There is no single right way to turn a list of
-# ingredients into a plate hypervector -- the choice of *encoder* determines what the resulting
+# ingredients into a plate hypervector: the choice of *encoder* determines what the resulting
 # vector remembers. The package ships several; here we compare three, from least to most
 # structured, using a taco's ingredients:
 
 ingredients = [🫓, 🥩, 🧅, 🌶️, 🧀]
 
-# **`multiset` -- an unordered bag** ($\oplus_i V_i$). It simply bundles the ingredients. It is
-# the simplest encoder, but it forgets *everything* except which ingredients are present: shuffle
+# **`multiset` creates an unordered bag**, it simply bundles the ingredients. It is
+# the simplest encoder, but it forgets everything except which ingredients are present: shuffle
 # them and you get the exact same vector.
 
-similarity(multiset(ingredients), multiset(reverse(ingredients)))
+multiset(ingredients)
 
-# **`bundlesequence` -- an ordered stack** ($\oplus_i \rho^{\,i-1}(V_i)$). It permutes each
-# ingredient by its position before bundling, so *order is remembered*. Now reversing the stack
-# gives an unrelated vector -- useful for layered dishes or recipe steps, where sequence matters:
+#
+
+similarity(multiset(ingredients), multiset(shuffle(ingredients)))
+
+# **`bundlesequence` creates an ordered stack**, it permutes each
+# ingredient by its position before bundling, encoding ordered presence of hypervectors.
+
+bundlesequence(ingredients)
+
+# Now reversing the stack
+# gives an unrelated vector, useful for layered dishes or recipe steps, where sequence matters:
 
 similarity(bundlesequence(ingredients), bundlesequence(reverse(ingredients)))
 
-# **`hashtable` -- a keyed record** ($\oplus_i K_i \otimes V_i$). It binds each *value* to a *key*
-# and bundles the pairs. This is the most structured of the three: order is irrelevant, but each
-# ingredient is filed under the role it plays, so we can later *query it back*. Let's define our
-# roles:
+# **`hashtable` creates a a keyed record**, it binds each key-value pair and bundles them
+# together. This is the most structured of the three: order is irrelevant, but each
+# ingredient is filed under the role it plays, so we can later *query it back*.
+#
+# Let's define our roles:
 
-BASE = H(:base)      # the carb: tortilla, bun, bread...
-PROTEIN = H(:protein)   # beef, chicken, turkey...
-VEGGIE = H(:veggie)    # onion, lettuce...
+BASE = H(:base)       # tortilla, bun, bread...
+PROTEIN = H(:protein) # beef, chicken, turkey...
+VEGGIE = H(:veggie)   # onion, lettuce...
 SAUCE = H(:sauce)     # salsa, ketchup, mayo...
 EXTRA = H(:extra)     # cheese, bacon...
+
 roles = [BASE, PROTEIN, VEGGIE, SAUCE, EXTRA]
 
 # Our 🌮 **taco** -- a tortilla base, beef, onion, salsa, and a bit of cheese -- and our
@@ -211,12 +216,12 @@ burger = hashtable(roles, [🍔, 🥩, 🥬, 🍅, 🧀])
 #     package also provides `multibind`, `bindsequence`, `ngrams`, `graph`, `crossproduct`, level
 #     encoders, and more -- see the [API reference](../api.md) for the full catalogue.
 #
-# # Comparison: are two plates alike?
+# ## Comparison: are two plates alike?
 #
 # With every plate living in the same space, we can reason about them in two complementary ways:
 # by **measuring similarity** and by doing **algebra** on the hypervectors.
 #
-# ## Measuring similarity
+# ### Measuring similarity
 #
 # Let's add a third plate, a 🥪 **club sandwich**. This one is interesting: its protein could be
 # chicken *or* turkey. We express that ambiguity directly by **superposing** (bundling) the two
@@ -284,22 +289,3 @@ recover(burger, onion_role)                                    # ...and the burg
 # The system answers `lettuce`: *onion is to the taco what lettuce is to the burger*. We have
 # inferred an analogy the recipes never stated explicitly -- the kind of associative reasoning
 # that makes hyperdimensional representations so powerful.
-#
-# # Wrap-up
-#
-# In one sitting we cooked three plates and met the whole HDC toolkit:
-#
-# - **Mapping** turned emojis into hypervectors.
-# - **Bundling** mixed ingredients into a filling similar to its parts (and let a protein be
-#   "chicken *or* turkey").
-# - **Binding** associated ingredients with roles -- and let us un-associate them again.
-# - **Permutation** let order matter.
-# - Different **encoders** (`multiset`, `bundlesequence`, `hashtable`) remember different things.
-# - **Similarity** told us which plates are alike, and **algebra** let us query recipes and map
-#   concepts from one dish to another.
-#
-# The takeaways generalize far beyond the kitchen: all data lives in the *same* high-dimensional
-# space, the representation is robust to noise thanks to the blessing of dimensionality, and
-# hypervectors plus a handful of encoders can represent richly structured data. From here, take a
-# look at the *"What's the Dollar of Mexico?"* example for more analogical reasoning, or the *Iris
-# dataset* example for a full classification workflow.
