@@ -165,7 +165,7 @@ function bundle(hdvs; kwargs...)
     return bundle(hv, hdvs, r; kwargs...)
 end
 
-Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bundle((hv1, hv2))
+Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
 
 # BINDING
 # -------
