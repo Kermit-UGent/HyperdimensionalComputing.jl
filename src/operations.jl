@@ -48,58 +48,10 @@ neutralbind(hdv::GradedBipolarHV) = -one(eltype(hdv))
 
 noisy_and(a, b) = a == b ? a : rand(Bool)
 
-function elementreduce!(f, itr, init)
-    return foldl(itr; init) do acc, value
-        acc .= f.(acc, value)
-    end
-end
-
-# computes `r[i] = f(x[i], y[i+offset])`
-# assumes postive offset (for now)
-@inline function offsetcombine!(r, f, x, y, offset = 0)
-    @assert length(r) == length(x) == length(y)
-    n = length(r)
-    if offset == 0
-        r .= f.(x, y)
-    else
-        i′ = n - offset
-        for i in 1:n
-            i′ = i′ == n ? 1 : i′ + 1
-            @inbounds r[i] = f(x[i], y[i′])
-        end
-    end
-    return r
-end
-
-@inline function offsetcombine(f, x::V, y::V, offset = 0) where {V <: AbstractVecOrMat}
-    @assert length(x) == length(y)
-    r = similar(x)
-    n = length(r)
-    if offset == 0
-        r .= f.(x, y)
-    else
-        i′ = n - offset
-        for i in 1:n
-            i′ = i′ == n ? 1 : i′ + 1
-            @inbounds r[i] = f(x[i], y[i′])
-        end
-    end
-    return r
-end
-
 # BUNDLE
 # ------
 
 # binary and bipolar: use majority
-#
-# When an even number of hypervectors is bundled, positions with an equal number
-# of votes for each state are ties that have to be resolved. To keep bundling
-# deterministic (identical inputs always yield the same result) while avoiding
-# the positional bias a fixed per-index rule would introduce, ties are broken
-# with a local RNG seeded from the aggregated votes `r`, which depends on every
-# input hypervector. Pass `rng` to override the seed (e.g. reproducible draws
-# from a caller-controlled stream), or `rng = Random.default_rng()` to recover
-# the previous, non-deterministic behaviour.
 function bundle(hvr::Union{BinaryHV, BipolarHV}, hdvs, r; rng::Union{Nothing, AbstractRNG} = nothing)
     m = length(hdvs)
     for hv in hdvs
@@ -159,16 +111,36 @@ function bundle(::FHRR, hdvs, r)
     return FHRR(r)
 end
 
+"""
+    bundle(hdvs; kwargs...)
+
+Computes the superposition of a set of hypervectors, resulting in a new
+hypervector similar to its inputs.
+
+Aliases to [`+`](@ref)
+"""
 function bundle(hdvs; kwargs...)
     hv = first(hdvs)
     r = empty_vector(hv)
     return bundle(hv, hdvs, r; kwargs...)
 end
 
+"""
+    Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV}
+
+Alias to [`bundle`](@ref)
+"""
 Base.:+(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bundle((hv1, hv2))
 
 # BINDING
 # -------
+"""
+    bind(hv1::HV, hv2::HV) where {HV <: AbstractHV}
+
+Create a new dissimilar hypervector from it's inputs.
+
+Aliases with [`*`](@ref)
+"""
 Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # default
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
@@ -177,7 +149,19 @@ Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v)
 Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v))
 Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v))
 Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v .* hv2.v)
+
+"""
+    Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV}
+
+Alias to [`bind`](@ref)
+"""
 Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
+
+"""
+    bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV}
+
+Bind a set of hypervectors.
+"""
 Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
 
 
@@ -187,24 +171,30 @@ Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
 Unbinds `hv2` from `hv1`. For many types of hypervectors, the binding operator is
 idempotent, i.e., `u * v * v == u`.
 
-Aliases with `/`.
+Aliases with [`/`](@ref)
 """
 unbind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
 unbind(hv1::HV, hv2::HV) where {HV <: Union{RealHV, FHRR}} = HV(hv1.v ./ hv2.v)
+
+"""
+Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV}
+
+Alias to [`unbind`](@ref)
+"""
 Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 
 
 # SHIFTING
 # --------
 
-# Shifting / Permutation
-shift!(hv::AbstractHV, k = 1) = circshift!(hv.v, k)
+"""
+    shift!(hv::AbstractHV, k = 1)
 
-function shift(hv::AbstractHV, k = 1)
-    r = similar(hv)
-    r.v .= circshift(hv.v, k)
-    return r
-end
+In-place permutation of hypervector `k` positions, obtaining a quasiorthogonal variant of the original.
+
+Aliases with [`ρ!`](@ref)
+"""
+shift!(hv::AbstractHV, k = 1) = circshift!(hv.v, k)
 
 function shift!(hv::V, k = 1) where {V <: Union{BinaryHV, BipolarHV}}
     v = similar(hv.v)  # empty bitvector
@@ -212,16 +202,46 @@ function shift!(hv::V, k = 1) where {V <: Union{BinaryHV, BipolarHV}}
     return hv
 end
 
+
+"""
+    ρ!(hv::AbstractHV, k = 1)
+
+Alias to [`shift!`](@ref)
+"""
+ρ!(hv::AbstractHV, k = 1) = shift!(hv, k)
+
+"""
+    shift(hv::AbstractHV, k = 1)
+
+Permutation of hypervector `k` positions, obtaining a quasiorthogonal variant of the original.
+
+Aliases with [`ρ`](@ref)
+"""
+function shift(hv::AbstractHV, k = 1)
+    r = similar(hv)
+    r.v .= circshift(hv.v, k)
+    return r
+end
+
 function shift(hv::V, k = 1) where {V <: Union{BinaryHV, BipolarHV}}
     v = similar(hv.v)  # empty bitvector
     return V(circshift!(v, hv.v, k))
 end
 
+"""
+    ρ(hv::AbstractHV, k = 1)
+
+Alias to [`shift`](@ref)
+"""
 ρ(hv::AbstractHV, k = 1) = shift(hv, k)
-ρ!(hv::AbstractHV, k = 1) = shift!(hv, k)
 
 
 # Comparison
+"""
+    Base.isequal(v::AbstractHV, u::AbstractHV)
+
+Check whether two hypervectors have the saem values.
+"""
 Base.isequal(v::AbstractHV, u::AbstractHV) = v.v == u.v
 
 """
@@ -270,6 +290,7 @@ end
 
 
 # Perturbation
+# TOD: @michiel.stock check the implementation of this and write docstrings
 function randbv(n::Int, m::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
     v = falses(n)
     v[1:m] .= true
@@ -308,7 +329,30 @@ function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG
     return hv
 end
 
-perturbate!(hv, args...; rng::AbstractRNG = Random.GLOBAL_RNG) = perturbate!(vectype(hv), hv, args...; rng = rng)
+""" 
+    perturbate!(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG)
+
+Perturbate hypervectors by randomly flipping values.
+
+# Arguments
+
+# Examples
+"""
+function perturbate!(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG)
+    return perturbate!(vectype(hv), hv, args...; rng = rng)
+end
+
+
+"""
+    perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG)
+
+Perturbate hypervector by randomly flipping values.
+
+# Arguments
+
+# Examples
+
+"""
 perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG, kwargs...) = perturbate!(copy(hv), args...; rng = rng, kwargs...)
 
 # OTHER

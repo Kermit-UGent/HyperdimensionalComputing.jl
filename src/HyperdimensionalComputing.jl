@@ -51,5 +51,4 @@ export similarity,
     δ,
     nearest_neighbor
 
-
 end

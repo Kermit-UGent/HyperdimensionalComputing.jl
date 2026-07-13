@@ -49,7 +49,7 @@ function similarity(u::AbstractVector, v::AbstractVector; method::Symbol)
 end
 
 """
-    similarity(hvs::AbstractVector{<:AbstractHV}; [method])
+    similarity(hvs::AbstractVector{<:AbstractHV}; [method])
 
 Computes the similarity matrix for a vector of hypervectors using
 the similarity metrics defined by the pairwise version of `similarity`.
@@ -68,7 +68,7 @@ end
 """
     similarity(u::AbstractHV; [method])
 
-Create a function that computes the similarity between its argument and `u`` 
+Create a function that computes the similarity between its argument and `u``
 using `similarity`, i.e. a function equivalent to `v -> similarity(u, v)`.
 """
 similarity(u::AbstractHV; kwargs...) = v -> similarity(u, v; kwargs...)
@@ -84,22 +84,13 @@ Alias for `similarity`. See `similarity` for the main documentation.
 δ = similarity
 
 
-nearest_neighbor(u::AbstractHV, collection; kwargs...) =
-    maximum(
-    (similarity(u, xi; kwargs...), i, xi)
-        for (i, xi) in enumerate(collection)
-)
-
-nearest_neighbor(u::AbstractHV, collection::Dict; kwargs...) =
-    maximum((similarity(u, xi; kwargs...), k, xi) for (k, xi) in collection)
-
 """
     nearest_neighbor(u::AbstractHV, collection[, k::Int]; kwargs...)
 
-Returns the element of `collection` that is most similar to `u`. 
+Returns the element of `collection` that is most similar to `u`.
 
 Function outputs `(τ, i, xi)` with `τ` the highest similarity value,
-`i` the index (or key if `collection` is a dictionary) of the closest 
+`i` the index (or key if `collection` is a dictionary) of the closest
 neighbor and `xi` the closest vector. `kwargs` is an optional argument
 for the similarity search.
 
@@ -121,3 +112,12 @@ function nearest_neighbor(u::AbstractHV, collection::Dict, k::Int; kwargs...)
     ]
     return partialsort!(sims, 1:k, rev = true)
 end
+
+nearest_neighbor(u::AbstractHV, collection; kwargs...) =
+    maximum(
+    (similarity(u, xi; kwargs...), i, xi)
+        for (i, xi) in enumerate(collection)
+)
+
+nearest_neighbor(u::AbstractHV, collection::Dict; kwargs...) =
+    maximum((similarity(u, xi; kwargs...), k, xi) for (k, xi) in collection)

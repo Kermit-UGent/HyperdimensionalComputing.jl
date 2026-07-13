@@ -18,6 +18,8 @@ Every hypervector HV has the following basic functionality
 
 TODO:
 - [ ] SparseHV
+- [ ] Add docstrings to all types. Each must include a random generation, all constructors defined,
+      value types, how HDC operations are defined and references to relevant papers.
 =#
 
 # ----------------------------------------------------------------------------------- AbstractHV
@@ -313,8 +315,7 @@ Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D = length(hv), distr = hv
 normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
-# Fourier Holographic Reduced Representations
-# --------------------------------------------
+# -------------------------------------------------- Fourier Holographic Reduced Representations
 
 struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
