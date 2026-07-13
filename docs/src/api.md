@@ -15,12 +15,16 @@ TernaryHV
 GradedBipolarHV
 RealHV
 GradedHV
+FHRR
 ```
 
 ## Operations
 ```@docs
+normalize
+normalize!
 bundle
 bind
+unbind
 shift!
 shift
 ρ
