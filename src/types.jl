@@ -58,6 +58,14 @@ All concrete hypervector types `HV <: AbstractHV` share the same constructor int
 Some types extend this interface with type-specific keywords, e.g. `distr` for
 [`RealHV`](@ref), [`GradedHV`](@ref) and [`GradedBipolarHV`](@ref).
 
+# Indexing
+
+`hv[i]` with an integer returns the element value. Non-scalar indexing —
+`hv[1:3]`, `hv[[1, 4]]`, logical masks — returns a plain `Vector` of element
+values, *not* a new hypervector: information in a hypervector is distributed over
+all `D` dimensions, so a slice is not itself a meaningful hypervector.
+Hypervectors are immutable; there is no `setindex!`.
+
 # Examples
 
 ```jldoctest
@@ -84,7 +92,11 @@ julia> length(BinaryHV(:cat; D = 100))    # dimensionality is set with the keywo
 abstract type AbstractHV{T} <: AbstractVector{T} end
 
 Base.copy(hv::HV) where {HV<:AbstractHV} = HV(copy(hv.v))
-Base.getindex(hv::AbstractHV, i) = hv.v[i]
+# Scalar indexing returns the element value; non-scalar indexing (ranges, index
+# vectors, logical masks) returns a plain Vector of element values, NOT a new
+# hypervector — a slice of a hypervector is not a meaningful hypervector.
+Base.getindex(hv::AbstractHV, i::Integer) = hv.v[i]
+Base.getindex(hv::AbstractHV, I::AbstractVector) = hv.v[I]
 Base.hash(hv::AbstractHV) = hash(hv.v)
 Base.similar(hv::HV) where {HV<:AbstractHV} = HV(; D=length(hv))
 Base.size(hv::AbstractHV) = size(hv.v)
@@ -104,8 +116,8 @@ warn_integer_token(HV::Type, this) = nothing
 warn_integer_token(HV::Type, this::Bool) = nothing
 function warn_integer_token(HV::Type, this::Integer)
     @warn "`$HV($this)` encodes the *object* `$this` as a hypervector — the positional " *
-        "argument is never the dimensionality. Use `$HV(; D = $this)` to set the number " *
-        "of dimensions instead. (This warning is only shown once per session.)" maxlog = 1 _id = :hv_integer_token
+          "argument is never the dimensionality. Use `$HV(; D = $this)` to set the number " *
+          "of dimensions instead. (This warning is only shown once per session.)" maxlog = 1 _id = :hv_integer_token
     return nothing
 end
 
@@ -118,7 +130,7 @@ end
     BipolarHV(v::AbstractVector{<:Integer})
 
 A bipolar hypervector in the style of the Multiply-Add-Permute (MAP) vector symbolic
-architecture (Gayler, 1998). Elements are `<<<DECIDE: {-1, +1} or ±1>>>`, stored
+architecture (Gayler, 1998). Elements are `±1`, stored
 compactly as a `BitVector`; indexing returns `±1`. Constructing from an integer
 vector maps positive entries to `+1` and the rest to `-1`.
 
@@ -126,7 +138,8 @@ Under this architecture, `bind` is elementwise XOR of the stored bits and
 self-inverse (binding by the same hypervector twice undoes it; note that in the
 `±1` representation this is the *negated* elementwise product), `bundle` is a
 majority vote across inputs with deterministic tie-breaking, and `similarity`
-defaults to cosine.
+defaults to cosine. Use [`TernaryHV`](@ref) for a (slightly less efficient)
+hypervector type that can contain zeros.
 
 The positional argument `this` is always the **object to encode** — it is hashed to
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
@@ -198,7 +211,8 @@ end
 BipolarHV(v::AbstractVector{<:Integer}) = BipolarHV(v .> 0)
 
 # Helpers
-Base.getindex(hv::BipolarHV, i) = hv.v[i] ? 1 : -1
+Base.getindex(hv::BipolarHV, i::Integer) = hv.v[i] ? 1 : -1
+Base.getindex(hv::BipolarHV, I::AbstractVector) = ifelse.(hv.v[I], 1, -1)
 Base.sum(hv::BipolarHV) = 2sum(hv.v) - length(hv.v)
 LinearAlgebra.norm(hv::BipolarHV) = sqrt(length(hv))
 empty_vector(hv::BipolarHV) = zeros(Int, length(hv))
@@ -232,7 +246,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 
 ```jldoctest
 julia> TernaryHV(; D = 8, seed = 42, rng = Xoshiro)
-8-element TernaryHV{Int64} with μ ± σ = 0.0 ± 1.069:
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
   1
   1
  -1
@@ -252,7 +266,7 @@ Bundling accumulates counts; `normalize` clamps back to `{-1, 0, +1}`:
 julia> x = TernaryHV(; D = 8, seed = 1, rng = Xoshiro); y = TernaryHV(; D = 8, seed = 2, rng = Xoshiro);
 
 julia> x + y
-8-element TernaryHV{Int64} with μ ± σ = 0.0 ± 1.852:
+8-element TernaryHV{Int64} with 3 positives, 2 zeros, and 3 negatives:
  -2
   0
  -2
@@ -263,7 +277,7 @@ julia> x + y
   2
 
 julia> normalize(x + y)
-8-element TernaryHV{Int64} with μ ± σ = 0.0 ± 0.926:
+8-element TernaryHV{Int64} with 3 positives, 2 zeros, and 3 negatives:
  -1
   0
  -1

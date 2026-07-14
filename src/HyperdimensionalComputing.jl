@@ -16,6 +16,8 @@ export AbstractHV,
     FHRR
 
 include("representations.jl")
+export unicodeheatmap,
+    unicodehistogram
 
 include("operations.jl")
 export bundle,

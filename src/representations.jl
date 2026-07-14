@@ -1,28 +1,48 @@
 #=
-Representing the hypervectors using pretty printing
-and a custom plotting recipe
+Pretty printing for hypervectors.
 
-See ext/UnicodePlotting.jl for extensions based on UnicodePlotting
+The plain path relies on Base's AbstractArray display machinery: we only provide
+type-specific `Base.summary` headers and let Base handle element alignment and
+`⋮` truncation. When the UnicodePlotting package extension is loaded (by loading
+UnicodePlots), `show` delegates to the extension's rich display, unless the IO
+context is `:compact`.
 =#
 
-function Base.show(io::IO, ::MIME"text/plain", hvs::AbstractVector{<:AbstractHV})
-    println(io, "$(length(hvs))-element $(typeof(hvs)):")
-    r = map(hvs) do hv
-        if hv isa BinaryHV
-            ntrue = count(hv.v)
-            nfalse = length(hv) - ntrue
-            " $(length(hv))-element $(typeof(hv)) with $(ntrue) true and $(nfalse) false"
-        elseif hv isa BipolarHV
-            npos = count(hv.v)
-            nneg = length(hv) - npos
-            " $(length(hv))-element $(typeof(hv)) with $(npos) positives and $(nneg) negatives"
-        elseif typeof(hv) == TernaryHV
-            counts = Dict(1 => count(>=(1), hv), -1 => count(<=(-1), hv), 0 => count(==(0), hv))
-            " $(length(hv))-element $(typeof(hv)) with $(counts[1]) positives, $(counts[0]) zeros, and $(counts[-1]) negatives"
-        else
-            " $(length(hv))-element $(typeof(hv)) with μ ± σ = $(round(mean(hv), digits = 3)) ± $(round(std(hv), digits = 3))"
-        end
+# Type-specific headers; Base's array printing does the rest.
+function Base.summary(io::IO, hv::BinaryHV)
+    ntrue = count(hv.v)
+    return print(io, length(hv), "-element ", typeof(hv), " with ", ntrue, " true and ", length(hv) - ntrue, " false")
+end
+
+function Base.summary(io::IO, hv::BipolarHV)
+    npos = count(hv.v)
+    return print(io, length(hv), "-element ", typeof(hv), " with ", npos, " positives and ", length(hv) - npos, " negatives")
+end
+
+function Base.summary(io::IO, hv::TernaryHV)
+    npos = count(>(0), hv.v)
+    nneg = count(<(0), hv.v)
+    return print(io, length(hv), "-element ", typeof(hv), " with ", npos, " positives, ", length(hv) - npos - nneg, " zeros, and ", nneg, " negatives")
+end
+
+function Base.summary(io::IO, hv::AbstractHV)
+    return print(io, length(hv), "-element ", typeof(hv), " with μ ± σ = ", round(mean(hv), digits = 3), " ± ", round(std(hv), digits = 3))
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", hv::AbstractHV)
+    ext = Base.get_extension(@__MODULE__, :UnicodePlotting)
+    if ext === nothing || get(io, :compact, false)::Bool
+        # standard Julia array display with the custom `summary` header
+        return invoke(show, Tuple{IO, MIME"text/plain", AbstractArray}, io, mime, hv)
+    else
+        return ext._show_rich(io, mime, hv)
     end
+end
+
+# Vectors of hypervectors: one summary line per hypervector.
+function Base.show(io::IO, ::MIME"text/plain", hvs::AbstractVector{<:AbstractHV})
+    println(io, summary(hvs), ":")
+    r = [" " * summary(hv) for hv in hvs]
 
     rows = displaysize(io)[1]
     if length(r) <= max(rows - 4, 0)
@@ -36,53 +56,33 @@ function Base.show(io::IO, ::MIME"text/plain", hvs::AbstractVector{<:AbstractHV}
     return print(io, join([first(r, chunksize); " ⋮"; last(r, chunksize)], '\n'))
 end
 
-function Base.show(io::IO, ::MIME"text/plain", hv::AbstractHV)
-    # NOTE: Based off https://github.com/JuliaLang/julia/blob/cf40898d56a5b32c6a2e97f61355440df36a7357/base/arrayshow.jl#L363
-    # Fast return for empty hypervectors
-    if isempty(hv)
-        if get(io, :compact, false)::Bool
-            return print(io, typeof(hv))
-        else
-            return println(io, "0-element $(typeof(hv)):")
-        end
-    end
+"""
+    unicodeheatmap(hv::AbstractHV)
 
-    # 1) show summary before setting :compact
-    if hv isa BinaryHV
-        ntrue = count(hv.v)
-        nfalse = length(hv) - ntrue
-        print(io, "$(length(hv))-element $(typeof(hv)) with $(ntrue) true and $(nfalse) false")
-    elseif hv isa BipolarHV
-        npos = count(hv.v)
-        nneg = length(hv) - npos
-        print(io, "$(length(hv))-element $(typeof(hv)) with $(npos) positives and $(nneg) negatives")
-    elseif typeof(hv) == TernaryHV
-        counts = Dict(1 => count(>=(1), hv), -1 => count(<=(-1), hv), 0 => count(==(0), hv))
-        print(io, "$(length(hv))-element $(typeof(hv)) with $(counts[1]) positives, $(counts[0]) zeros, and $(counts[-1]) negatives")
-    else
-        print(io, "$(length(hv))-element $(typeof(hv)) with μ ± σ = $(round(mean(hv), digits = 3)) ± $(round(std(hv), digits = 3))")
-    end
+Render a hypervector as a square unicode heatmap of its leading `⌊√D⌋²` elements
+(phases for [`FHRR`](@ref)).
 
-    print(io, ":")
+Only available when UnicodePlots is loaded (`using UnicodePlots`); implemented in
+the UnicodePlotting package extension.
 
-    # 2) compute new IOContext
-    if !haskey(io, :compact) && length(axes(hv, 2)) > 1
-        io = IOContext(io, :compact => true)
-    end
-    if get(io, :limit, false)::Bool && eltype(hv) === Method
-        io = IOContext(io, :limit => false)
-    end
+# See also
 
-    if get(io, :limit, false)::Bool && displaysize(io)[1] - 4 <= 0
-        print(io, " …")
-    else
-        println(io)
-    end
+[`unicodehistogram`](@ref)
+"""
+function unicodeheatmap end
 
-    # 3) update typeinfo
-    io = IOContext(io, :typeinfo => eltype(hv))
+"""
+    unicodehistogram(hv::AbstractHV)
 
-    # 4) show actual content
-    recur_io = IOContext(io, :SHOWN_SET => hv)
-    return Base.print_array(recur_io, hv)
-end
+Render the distribution of a hypervector's elements as a unicode histogram
+(a bar plot of counts for the discrete types [`BinaryHV`](@ref), [`BipolarHV`](@ref)
+and [`TernaryHV`](@ref); phases for [`FHRR`](@ref)).
+
+Only available when UnicodePlots is loaded (`using UnicodePlots`); implemented in
+the UnicodePlotting package extension.
+
+# See also
+
+[`unicodeheatmap`](@ref)
+"""
+function unicodehistogram end
