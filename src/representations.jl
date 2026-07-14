@@ -25,7 +25,10 @@ function Base.summary(io::IO, hv::TernaryHV)
     return print(io, length(hv), "-element ", typeof(hv), " with ", npos, " positives, ", length(hv) - npos - nneg, " zeros, and ", nneg, " negatives")
 end
 
-function Base.summary(io::IO, hv::AbstractHV)
+# μ ± σ is informative for real-valued elements; for FHRR (complex points on the
+# unit circle) the mean/std carry no information, so FHRR intentionally has no
+# summary override and gets Base's plain "N-element FHRR{...}" header.
+function Base.summary(io::IO, hv::Union{RealHV, GradedHV, GradedBipolarHV})
     return print(io, length(hv), "-element ", typeof(hv), " with μ ± σ = ", round(mean(hv), digits = 3), " ± ", round(std(hv), digits = 3))
 end
 

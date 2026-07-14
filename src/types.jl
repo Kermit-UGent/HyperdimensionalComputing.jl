@@ -38,7 +38,7 @@ rather than located in individual elements. Hypervectors are composed with
 
 All concrete hypervector types `HV <: AbstractHV` share the same constructor interface:
 
-    HV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    HV(; D = 10_000, seed = nothing, rng = default_rng())
     HV(this; D = 10_000)
     HV(v::AbstractVector)
 
@@ -124,7 +124,7 @@ end
 
 # ------------------------------------------------------------------------------------ BipolarHV
 """
-    BipolarHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    BipolarHV(; D = 10_000, seed = nothing, rng = default_rng())
     BipolarHV(this; D = 10_000)
     BipolarHV(v::AbstractVector{Bool})
     BipolarHV(v::AbstractVector{<:Integer})
@@ -145,6 +145,9 @@ The positional argument `this` is always the **object to encode** — it is hash
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -210,9 +213,9 @@ end
 BipolarHV(v::AbstractVector{<:Integer}) = BipolarHV(v .> 0)
 
 # Helpers
-Base.getindex(hv::BipolarHV, i::Integer) = hv.v[i] ? 1 : -1
-Base.getindex(hv::BipolarHV, I::AbstractVector) = ifelse.(hv.v[I], 1, -1)
-Base.sum(hv::BipolarHV) = 2sum(hv.v) - length(hv.v)
+Base.getindex(hv::BipolarHV, i::Integer) = hv.v[i] ? -1 : 1
+Base.getindex(hv::BipolarHV, I::AbstractVector) = ifelse.(hv.v[I], -1, 1)
+Base.sum(hv::BipolarHV) = length(hv.v) - 2sum(hv.v)
 LinearAlgebra.norm(hv::BipolarHV) = sqrt(length(hv))
 empty_vector(hv::BipolarHV) = zeros(Int, length(hv))
 eldist(::Type{BipolarHV}) = 2Bernoulli(0.5) - 1
@@ -220,7 +223,7 @@ eldist(::Type{BipolarHV}) = 2Bernoulli(0.5) - 1
 
 # ------------------------------------------------------------------------------------ TernaryHV
 """
-    TernaryHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    TernaryHV(; D = 10_000, seed = nothing, rng = default_rng())
     TernaryHV(this; D = 10_000)
     TernaryHV(v::AbstractVector{<:Integer})
     TernaryHV{T}(...)
@@ -240,6 +243,9 @@ The positional argument `this` is always the **object to encode** — it is hash
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -353,7 +359,7 @@ eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
 
 # ------------------------------------------------------------------------------------ BinaryHV
 """
-    BinaryHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    BinaryHV(; D = 10_000, seed = nothing, rng = default_rng())
     BinaryHV(this; D = 10_000)
     BinaryHV(v::AbstractVector{Bool})
 
@@ -361,14 +367,17 @@ A binary hypervector implementing the Binary Spatter Code (BSC) vector symbolic
 architecture (Kanerva, 1994–1997). Elements are `{false,true}`,
 stored compactly as a `BitVector`.
 
-Under BSC, `bind` is elementwise XOR and self-inverse (binding by the same
-hypervector twice undoes it), `bundle` is a majority vote across inputs with
+Under BSC, `bind` is elementwise XOR and self-inverse (`x * x` is the identity
+element), `bundle` is a majority vote across inputs with
 deterministic tie-breaking, and `similarity` defaults to Jaccard.
 
 The positional argument `this` is always the **object to encode** — it is hashed to
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -441,7 +450,7 @@ eldist(::Type{BinaryHV}) = Bernoulli(0.5)
 
 # --------------------------------------------------------------------------------------- RealHV
 """
-    RealHV(; D = 10_000, distr = Normal(), seed = nothing, rng = Random.default_rng())
+    RealHV(; D = 10_000, distr = Normal(), seed = nothing, rng = default_rng())
     RealHV(this; D = 10_000, distr = Normal())
     RealHV(v::AbstractVector{<:Real}[, distr])
 
@@ -450,14 +459,20 @@ are drawn from a configurable distribution `distr` (standard normal by default),
 which the vector carries along so that `normalize!` can rescale a result back to
 the original spread.
 
-Under this architecture, `bind` is elementwise multiplication, inverted exactly by
-[`unbind`](@ref) (elementwise division), `bundle` is elementwise addition rescaled
-by `√m` for `m` inputs, and `similarity` defaults to cosine.
+Under this architecture, `bind` is elementwise multiplication, `bundle` is
+elementwise addition rescaled by `√m` for `m` inputs, and `similarity` defaults
+to cosine. Real-valued MAP binding is not exactly invertible, so [`unbind`](@ref)
+**throws** for this type: recover bound information with [`similarity`](@ref)
+against candidate hypervectors, or use [`FHRR`](@ref) or [`BipolarHV`](@ref) if
+you need exact unbinding.
 
 The positional argument `this` is always the **object to encode** — it is hashed to
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -539,7 +554,7 @@ eldist(::Type{<:RealHV}) = Normal()
 
 # -------------------------------------------------------------------------------------- GradedHV
 """
-    GradedHV(; D = 10_000, distr = Beta(1, 1), seed = nothing, rng = Random.default_rng())
+    GradedHV(; D = 10_000, distr = Beta(1, 1), seed = nothing, rng = default_rng())
     GradedHV(this; D = 10_000, distr = Beta(1, 1))
     GradedHV(v::AbstractVector{<:Real}[, distr])
 
@@ -556,6 +571,9 @@ The positional argument `this` is always the **object to encode** — it is hash
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -633,7 +651,7 @@ empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
 # -------------------------------------------------------------------------------- GradedBipolarHV
 """
-    GradedBipolarHV(; D = 10_000, distr = 2Beta(1, 1) - 1, seed = nothing, rng = Random.default_rng())
+    GradedBipolarHV(; D = 10_000, distr = 2Beta(1, 1) - 1, seed = nothing, rng = default_rng())
     GradedBipolarHV(this; D = 10_000, distr = 2Beta(1, 1) - 1)
     GradedBipolarHV(v::AbstractVector{<:Real}[, distr])
 
@@ -651,6 +669,9 @@ The positional argument `this` is always the **object to encode** — it is hash
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
+
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
 
 # Examples
 
@@ -726,7 +747,7 @@ eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 # --------------------------------------------
 
 """
-    FHRR(; D = 10_000, T = Float64, seed = nothing, rng = Random.default_rng())
+    FHRR(; D = 10_000, T = Float64, seed = nothing, rng = default_rng())
     FHRR(this; D = 10_000, T = Float64)
     FHRR(v::AbstractVector{<:Complex})
 
@@ -745,11 +766,14 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 `D`. Encoding the same object twice yields the same hypervector. See
 [`AbstractHV`](@ref) for the full convention.
 
+Indexing with a scalar returns a single element; indexing with a range or vector
+returns a plain `Vector`, not a hypervector.
+
 # Examples
 
 ```jldoctest
 julia> FHRR(; D = 4, rng = Xoshiro(42))
-4-element FHRR{ComplexF64} with μ ± σ = -0.73 - 0.309im ± 0.704:
+4-element FHRR{ComplexF64}:
  -0.6875407989187119 - 0.7261457497102214im
  -0.9517124499338168 + 0.3069908999318585im
  -0.9899412825080958 + 0.14147882239482543im

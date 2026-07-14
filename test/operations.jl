@@ -86,6 +86,34 @@ Random.seed!(42)
         end
     end
 
+    @testset "unbind" begin
+        # XOR- and multiplication-based types: binding is self-inverse, roundtrip exact
+        for HV in [BinaryHV, BipolarHV, TernaryHV]
+            x, y = HV(:x), HV(:y)
+            @test unbind(bind(x, y), y) == x
+            @test (x * y) / y == x
+        end
+
+        # graded types: fuzzy unbinding is approximate — the recovered vector is
+        # closer to the original than to an unrelated one
+        for HV in [GradedHV, GradedBipolarHV]
+            x, y, z = HV(:x), HV(:y), HV(:z)
+            recovered = (x * y) / y
+            @test recovered isa HV
+            @test similarity(recovered, x) > similarity(recovered, z)
+        end
+
+        # FHRR: exact inverse via elementwise complex division
+        x, y = FHRR(:x), FHRR(:y)
+        @test collect((x * y) / y) ≈ collect(x)
+
+        # RealHV: real-valued MAP binding is not exactly invertible — explicit error
+        r1, r2 = RealHV(:x), RealHV(:y)
+        @test_throws ArgumentError unbind(r1, r2)
+        @test_throws ArgumentError r1 / r2
+        @test_throws "not exactly invertible" unbind(r1, r2)
+    end
+
     @testset "FHRR" begin
         hv1 = FHRR(; D = n)
         hv2 = FHRR(; D = n)

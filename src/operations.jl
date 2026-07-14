@@ -190,7 +190,8 @@ Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
 
 Bind (associate) hypervectors into a single hypervector that is dissimilar to its
 inputs while preserving distances. Overloaded as the `*` operator and inverted by
-[`unbind`](@ref) (`/`).
+[`unbind`](@ref) (`/`) — except for [`RealHV`](@ref), whose binding is not exactly
+invertible.
 
 The binding rule depends on the hypervector type: XOR of the stored bits, which is
 self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplication
@@ -214,15 +215,36 @@ Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
 
 
 """
-    unbind(hv1::HV, hv2::HV)
+    unbind(hv1, hv2)
 
-Unbinds `hv2` from `hv1`. For many types of hypervectors, the binding operator is
-idempotent, i.e., `u * v * v == u`.
+Unbind `hv2` from `hv1`, inverting [`bind`](@ref): `unbind(bind(x, y), y)` recovers
+`x`. Overloaded as the `/` operator.
 
-Aliases with `/`.
+For the XOR- and multiplication-based types ([`BinaryHV`](@ref), [`BipolarHV`](@ref),
+[`TernaryHV`](@ref)) binding is self-inverse, so `unbind` is simply `bind`; the same
+fallback gives approximate fuzzy unbinding for [`GradedHV`](@ref) and
+[`GradedBipolarHV`](@ref). [`FHRR`](@ref) unbinds exactly via elementwise complex
+division.
+
+!!! warning
+    Real-valued MAP binding is not exactly invertible, so `unbind` **throws** for
+    [`RealHV`](@ref). Recover bound information with [`similarity`](@ref) against
+    candidate hypervectors, or use [`FHRR`](@ref) or [`BipolarHV`](@ref) if you
+    need exact unbinding.
+
+# See also
+
+[`bind`](@ref), [`bundle`](@ref), [`similarity`](@ref)
 """
 unbind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
-unbind(hv1::HV, hv2::HV) where {HV <: Union{RealHV, FHRR}} = HV(hv1.v ./ hv2.v)
+unbind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v ./ hv2.v)
+unbind(::RealHV, ::RealHV) = throw(
+    ArgumentError(
+        "real-valued MAP binding is not exactly invertible; recover bound " *
+            "information with `similarity` against candidate hypervectors, or use " *
+            "`FHRR` or `BipolarHV` if you need exact unbinding"
+    )
+)
 Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 
 
