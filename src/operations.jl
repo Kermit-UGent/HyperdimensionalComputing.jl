@@ -127,28 +127,28 @@ function bundle(
 end
 
 # realhv: just add + rescale with sqrt m
-function bundle(::RealHV, hdvs, r)
+function bundle(hv1::RealHV, hdvs, r)
     m = 0
     for hv in hdvs
         r .+= hv.v
         m += 1
     end
     r ./= sqrt(m)
-    return RealHV(r)
+    return RealHV(r, hv1.distr)
 end
 
-function bundle(::GradedHV, hdvs, r)
+function bundle(hv1::GradedHV, hdvs, r)
     for hv in hdvs
         r .= three_pi.(r, hv.v)
     end
-    return GradedHV(r)
+    return GradedHV(r, hv1.distr)
 end
 
-function bundle(::GradedBipolarHV, hdvs, r)
+function bundle(hv1::GradedBipolarHV, hdvs, r)
     for hv in hdvs
         r .= three_pi_bipol.(r, hv.v)
     end
-    return GradedBipolarHV(r)
+    return GradedBipolarHV(r, hv1.distr)
 end
 
 function bundle(::FHRR, hdvs, r)
@@ -206,9 +206,9 @@ Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # def
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::TernaryHV, hv2::TernaryHV) = TernaryHV(hv1.v .* hv2.v)
-Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v)
-Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v))
-Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v))
+Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v, hv1.distr)
+Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v), hv1.distr)
+Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v), hv1.distr)
 Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v .* hv2.v)
 Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
 Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)

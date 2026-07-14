@@ -1,4 +1,5 @@
 using Random
+using Distributions
 
 Random.seed!(42)
 @testset "operations" begin
@@ -84,6 +85,30 @@ Random.seed!(42)
                 @test !(hv3 ≈ hv2)
             end
         end
+    end
+
+    # regression (TODO §1.5): bundle and bind used to silently replace a custom
+    # element distribution with the default, which changes normalize! numerics
+    @testset "bundle/bind preserve distr" begin
+        for (HV, d) in [
+                (RealHV, Normal(0, 5)),
+                (GradedHV, Beta(10, 2)),
+                (GradedBipolarHV, 2Beta(10, 2) - 1),
+            ]
+            x = HV(; D = 100, distr = d, seed = 1)
+            y = HV(; D = 100, distr = d, seed = 2)
+            @test bundle([x, y]).distr === x.distr
+            @test (x + y).distr === x.distr
+            @test bind(x, y).distr === x.distr
+            @test (x * y).distr === x.distr
+        end
+
+        # the observable consequence: normalize! rescales to the ORIGINAL spread —
+        # the metadata assertion alone would not catch this
+        x = RealHV(; D = 10_000, distr = Normal(0, 5), seed = 1)
+        y = RealHV(; D = 10_000, distr = Normal(0, 5), seed = 2)
+        @test isapprox(std(collect(normalize!(x + y))), 5; rtol = 0.1)
+        @test isapprox(std(collect(normalize!(x * y))), 5; rtol = 0.1)
     end
 
     @testset "unbind" begin
