@@ -2,10 +2,6 @@
 EditURL = "introduction-to-hdc.jl"
 ```
 
-````@example introduction-to-hdc
-using Handcalcs #hide
-````
-
 # Introduction
 
 Hyperdimensional Computing (HDC) is a brain-inspired computational paradigm that represents
@@ -20,8 +16,6 @@ Let's start by loading the package in question, as follows:
 
 ````@example introduction-to-hdc
 using HyperdimensionalComputing
-
-ρ(hv::AbstractHDV, n::Int=1) = Π(hv,n) #hide
 ````
 
 # Creating hypervectors
@@ -29,7 +23,7 @@ using HyperdimensionalComputing
 First, we will create a random bipolar hypervector. This is done as follows:
 
 ````@example introduction-to-hdc
-BipolarHDV()
+BipolarHV()
 ````
 
 As you may see, by default the hypervector created has 10.000 dimensions. This is the default
@@ -37,32 +31,40 @@ value in `HyperdimensionalComputing.jl`, but one can can create a hypervector of
 dimensionality by providing the size of this as an argument:
 
 ````@example introduction-to-hdc
-BipolarHDV(8)
+BipolarHV(; D = 8)
 ````
 
-Alternatively, one can create a hypervector directly from a `AbstractVector`:
+Alternatively, one can create a hypervector directly from a `Vector{T}` where `{T}` is an
+appropiate data type, e.g. integers for BipolarHV:
 
 ````@example introduction-to-hdc
-BipolarHDV(rand([-1,1], 8))
+BipolarHV(rand((-1, 1), 8))
+````
+
+or you can directly pass any Julia structure to use it as a seed for the hypervector
+generation:
+
+````@example introduction-to-hdc
+BipolarHV(:foo)
 ````
 
 Let's create 3 bipolar hypervector to use for the tutorial:
 
 ````@example introduction-to-hdc
-h₁ = BipolarHDV(8)
-h₂ = BipolarHDV(8)
-h₃ = BipolarHDV(8);
+h₁ = BipolarHV(; D = 8)
+h₂ = BipolarHV(; D = 8)
+h₃ = BipolarHV(; D = 8);
 nothing #hide
 ````
 
-The package has different hypervector types, such as `BipolarHDV`, `TernaryHDV`, `RealHDV`,
-`GradedBipolarHDV`, and `GradedHDV`. All of this hypervectors have a common abstract type
-`AbstractHDV` which can be used to build additional functions or encoding strategies (more on
+The package has different hypervector types, such as `BipolarHV`, `TernaryHV`, `RealHV`,
+`GradedBipolarHV`, and `GradedHV`. All of this hypervectors have a common abstract type
+`AbstractHV` which can be used to build additional functions or encoding strategies (more on
 both later).
 
 !!! info "On (abstract) types"
     All hypervectors implemented on `HyperdimensionalComputing.jl` can be found by checking the
-    docstrings for the `AbstractHDV` (by typing `?AbstractHDV` on the Julia REPL).
+    docstrings for the `AbstractHV` (by typing `?AbstractHV` on the Julia REPL).
 
     For more information on a specific hypervector type, the docstrings contain information on
     the implementation, operations, similarity measurement and other technical
@@ -76,7 +78,7 @@ the representation more complex structures:
 ## Bundling
 
 Bundling (also known as superposition) combines multiple hypervectors to create a new hypervector
-that is similar to it's constituyents.
+that is similar to it's constituents.
 
 $$u = [h_1 + h_2 + h_3]$$
 
@@ -93,16 +95,16 @@ $$\text{sign}(i) = \begin{cases}
 In HyperdimensionalComputing.jl, you can bundle hypervectors as follows:
 
 ````@example introduction-to-hdc
-aggregate([h₁, h₂, h₃])
+bundle([h₁, h₂, h₃])
 ````
 
-alternatively, you can use the `+` operator (which if overloaded for all `AbstractHDV`):
+alternatively, you can use the `+` operator (which if overloaded for all `AbstractHV`):
 
 ````@example introduction-to-hdc
 h₁ + h₂ + h₃
 ````
 
-This operation generates a hypervector that is similar to all it's contituyent hypervectors,
+This operation generates a hypervector that is similar to all it's constituent hypervectors,
 such that
 
 $$h₁ \sim u, h₂ \sim u, h₃ \sim u$$
@@ -113,7 +115,7 @@ expected by chance.
 ## Binding
 
 Binding combines multiple hypervectors to create a new hypervector that is dissimilar to it's
-constituyents, such that:
+constituents, such that:
 
 $$v = [h₁ \times h₂ \times h₃]$$
 
@@ -125,13 +127,13 @@ In HyperdimensionalComputing.jl, you can bind hypervectors as follows:
 bind([h₁, h₂, h₃])
 ````
 
-alternatively, you can use the `*` operator (which if overloaded for all `AbstractHDV`):
+alternatively, you can use the `*` operator (which if overloaded for all `AbstractHV`):
 
 ````@example introduction-to-hdc
 h₁ * h₂ * h₃
 ````
 
-This operation generates a hypervector that is similar to all it's contituyent hypervectors,
+This operation generates a hypervector that is similar to all it's constituent hypervectors,
 such that
 
 $$h₁ \nsim v, h₂ \nsim v, h₃ \nsim v$$
@@ -147,15 +149,12 @@ positions.
 $$m = \rho(h₁)$$
 
 ````@example introduction-to-hdc
-@handcalcs h₁ # hide
+h₄ = RealHV(collect(0.0:9.0))
+h₄.v
 ````
 
 ````@example introduction-to-hdc
-@handcalcs ρ(h₁) # hide
-````
-
-````@example introduction-to-hdc
-@handcalcs h₁ != ρ(h₁) # hide
+ρ(h₄).v
 ````
 
 The new hypervector will be, in principle, dissimilar to it's original version, such that:
@@ -198,6 +197,17 @@ or a hypervector and a vector of hypervectors:
 similarity.(Ref(h₁), [h₁, h₂, h₃])
 ````
 
+`δ` is a synonim of `similarity`, and can also be used to create a function for similarity
+comparison, e.g.
+
+````@example introduction-to-hdc
+f = δ(h₁)
+````
+
+````@example introduction-to-hdc
+f.([h₁, h₂, h₃])
+````
+
 ## Encoding things as hypervectors
 
 The true power of HDC emerges when we combine the fundamental operations to encode complex data
@@ -212,75 +222,91 @@ explore some fundamental encoding strategies that demonstrate this flexibility.
 Animal hypervectors:
 
 ````@example introduction-to-hdc
-dog_hv = BipolarHDV()
-cat_hv = BipolarHDV()
-cow_hv = BipolarHDV()
-animals = [dog_hv, cat_hv, cow_hv]
+H_dog = TernaryHV(:dog)
+H_cat = TernaryHV(:cat)
+H_cow = TernaryHV(:cow)
+H_animals = [H_dog, H_cat, H_cow]
 ````
 
 Sound hypervectors:
 
 ````@example introduction-to-hdc
-bark_hv = BipolarHDV()
-meow_hv = BipolarHDV()
-moo_hv  = BipolarHDV()
-sounds = [bark_hv, meow_hv, moo_hv]
+H_bark = TernaryHV(:bark)
+H_meow = TernaryHV(:meow)
+H_moo = TernaryHV(:moo)
+H_sounds = [H_bark, H_meow, H_moo]
 ````
 
 Associative memory:
 
 ````@example introduction-to-hdc
-memory = (dog_hv * bark_hv) + (cat_hv * meow_hv) + (cow_hv * moo_hv);
+memory = (H_dog * H_bark) + (H_cat * H_meow) + (H_cow * H_moo);
 nothing #hide
+````
+
+!!! note
+
+````@example introduction-to-hdc
+#	  Alternatively you can use the `hashtable` encoder to achieve the same:
+
+memory == hashtable(H_animals, H_sounds)
 ````
 
 Querying memory to search for dog's sound:
 
 ````@example introduction-to-hdc
-findmax(hv -> similarity(memory * dog_hv, hv), sounds)
+nearest_neighbor(H_dog * memory, H_sounds)
 ````
 
-Querying memory to search which animals goes "moo":
+Querying memory to search which animals go "moo":
 
 ````@example introduction-to-hdc
-findmax(hv -> similarity(memory * moo_hv, hv), animals)
+nearest_neighbor(H_moo * memory, H_animals)
 ````
 
 This is a very simple example, but you could think of having a more complex thing going on or
-having more animal that, for example, share sounds.
+having more animals that, for example, share sounds.
 
 ### Sequences
 
 **N-grams** represent sequences by encoding the order of elements. This is particularly useful for text processing where word order matters.
 
-Generate hypervectors for all characters in the alphabet
+Encode the phrases using the builtin `ngrams` encoder, with uses a sliding window of 3
+characters.
 
-````@example introduction-to-hdc
-char2hv = Dict(c => BipolarHDV() for c in 'a':'z')
-char2hv[' '] = BipolarHDV()
-````
-
-Encode the phrases using 3-grams
+Let's encode some phrases and then search for a specific word in them. First, the sentences
+list:
 
 ````@example introduction-to-hdc
 phrases = [
-	"the quick brown fox jumps over the lazy dog",
-	"the slick grown box bumps under the hazy fog",
-	"the thick known cox dumps inter the crazy cog",
-	"the brick shown pox lumps enter the glazy jog",
-	"the stick blown sox pumps winter the blazy log"
-]
-
-ngrams(p, d) = aggregate([d[p[i]] + Π(d[p[i+1]], 1) + Π(d[p[i+2]], 2) for i in 1:length(p)-2])
-
-phrases_hvs = [ngrams(p, char2hv) for p in phrases]
+    "the quick brown fox jumps over the lazy dog",
+    "the slick grown box bumps under the hazy fog",
+    "the thick known cox dumps inter the crazy cog",
+    "the brick shown pox lumps enter the glazy jog",
+    "the stick blown sox pumps winter the blazy log",
+];
+nothing #hide
 ````
 
-Search for "crazy" in phrases
+Now, lets encode sentences using the characters as seed for our basis hypervectors and use n-gram
+encoding to represent the sentences as hypervectors:
 
 ````@example introduction-to-hdc
-query = ngrams("crazy", char2hv)
-findmax(h -> similarity(query, h), phrases_hvs)
+encode(p::String) = map(c -> BinaryHV(c), collect(p)) |> ngrams
+````
+
+````@example introduction-to-hdc
+H_phrases = map(encode, phrases)
+````
+
+Now that we have the sentence hypervectors, let's search for "crazy" in phrases:
+
+````@example introduction-to-hdc
+query = map(c -> BinaryHV(c), collect("crazy")) |> ngrams
+````
+
+````@example introduction-to-hdc
+nearest_neighbor(query, H_phrases)
 ````
 
 Great! We correctly found that "crazy" is in phrase 3.

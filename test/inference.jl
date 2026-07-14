@@ -66,8 +66,13 @@
         @test similarity(x, y) == δ(x)(y)
     end
 
+    @testset "δ alias" begin
+        @test isconst(HyperdimensionalComputing, :δ)   # regression (TODO §1.7)
+        @test δ === similarity
+    end
+
     @testset "Similarity matrix" begin
-        levels = level(RealHV(100), 10)
+        levels = level(RealHV(; D = 100), 10)
         M = similarity(levels)
         @test M isa Matrix
         @test size(M) == (10, 10)

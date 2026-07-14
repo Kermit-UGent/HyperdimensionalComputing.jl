@@ -10,10 +10,13 @@ SOURCE_FILES = Glob.glob("*.jl", TUTORIALS)
 foreach(fn -> Literate.markdown(fn, TUTORIALS), SOURCE_FILES)
 
 # Setup Documenter.jl
+# The doctest setup mirrors what the doctest CI step uses: Xoshiro for seeded,
+# reproducible RNG in examples and Distributions for the `distr` keyword examples.
 DocMeta.setdocmeta!(
     HyperdimensionalComputing,
     :DocTestSetup,
-    :(using HyperdimensionalComputing); recursive = true
+    :(using HyperdimensionalComputing, Distributions; using Random: Xoshiro);
+    recursive = true
 )
 
 # Get repository information dynamically for fork support
@@ -54,4 +57,3 @@ deploydocs(;
         end
     end,
 )
-

@@ -123,32 +123,33 @@ function bundle(
         r .+= hv.v
     end
     normalize && clamp!(r, -1, 1)
-    return TernaryHV(r)
+    # inner constructor: bundling may exceed the ternary domain by design
+    return TernaryHV{eltype(r)}(r)
 end
 
 # realhv: just add + rescale with sqrt m
-function bundle(::RealHV, hdvs, r)
+function bundle(hv1::RealHV, hdvs, r)
     m = 0
     for hv in hdvs
         r .+= hv.v
         m += 1
     end
     r ./= sqrt(m)
-    return RealHV(r)
+    return RealHV(r, hv1.distr)
 end
 
-function bundle(::GradedHV, hdvs, r)
+function bundle(hv1::GradedHV, hdvs, r)
     for hv in hdvs
         r .= three_pi.(r, hv.v)
     end
-    return GradedHV(r)
+    return GradedHV(r, hv1.distr)
 end
 
-function bundle(::GradedBipolarHV, hdvs, r)
+function bundle(hv1::GradedBipolarHV, hdvs, r)
     for hv in hdvs
         r .= three_pi_bipol.(r, hv.v)
     end
-    return GradedBipolarHV(r)
+    return GradedBipolarHV(r, hv1.distr)
 end
 
 function bundle(::FHRR, hdvs, r)
@@ -159,6 +160,21 @@ function bundle(::FHRR, hdvs, r)
     return FHRR(r)
 end
 
+"""
+    bundle(hvs; kwargs...)
+
+Bundle (superpose) a collection of hypervectors into a single hypervector that is
+similar to every input. Overloaded as the `+` operator.
+
+The aggregation rule depends on the hypervector type: majority vote with
+deterministic tie-breaking ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise
+addition ([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy aggregation
+([`GradedHV`](@ref), [`GradedBipolarHV`](@ref)) or phasor addition ([`FHRR`](@ref)).
+
+# See also
+
+[`bind`](@ref), [`similarity`](@ref)
+"""
 function bundle(hdvs; kwargs...)
     hv = first(hdvs)
     r = empty_vector(hv)
@@ -169,28 +185,67 @@ Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
 
 # BINDING
 # -------
+"""
+    bind(hv1, hv2)
+    bind(hvs::AbstractVector{<:AbstractHV})
+
+Bind (associate) hypervectors into a single hypervector that is dissimilar to its
+inputs while preserving distances. Overloaded as the `*` operator and inverted by
+[`unbind`](@ref) (`/`) — except for [`RealHV`](@ref), whose binding is not exactly
+invertible.
+
+The binding rule depends on the hypervector type: XOR of the stored bits, which is
+self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplication
+([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy XOR ([`GradedHV`](@ref),
+[`GradedBipolarHV`](@ref)) or complex multiplication ([`FHRR`](@ref)).
+
+# See also
+
+[`bundle`](@ref), [`unbind`](@ref), [`similarity`](@ref)
+"""
 Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # default
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
-Base.bind(hv1::TernaryHV, hv2::TernaryHV) = TernaryHV(hv1.v .* hv2.v)
-Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v)
-Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v))
-Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v))
+Base.bind(hv1::TernaryHV, hv2::TernaryHV) = (v = hv1.v .* hv2.v; TernaryHV{eltype(v)}(v))  # inner: operands may hold accumulated counts
+Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v, hv1.distr)
+Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v), hv1.distr)
+Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v), hv1.distr)
 Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v .* hv2.v)
 Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
 Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
 
 
 """
-    unbind(hv1::HV, hv2::HV)
+    unbind(hv1, hv2)
 
-Unbinds `hv2` from `hv1`. For many types of hypervectors, the binding operator is
-idempotent, i.e., `u * v * v == u`.
+Unbind `hv2` from `hv1`, inverting [`bind`](@ref): `unbind(bind(x, y), y)` recovers
+`x`. Overloaded as the `/` operator.
 
-Aliases with `/`.
+For the XOR- and multiplication-based types ([`BinaryHV`](@ref), [`BipolarHV`](@ref),
+[`TernaryHV`](@ref)) binding is self-inverse, so `unbind` is simply `bind`; the same
+fallback gives approximate fuzzy unbinding for [`GradedHV`](@ref) and
+[`GradedBipolarHV`](@ref). [`FHRR`](@ref) unbinds exactly via elementwise complex
+division.
+
+!!! warning
+    Real-valued MAP binding is not exactly invertible, so `unbind` **throws** for
+    [`RealHV`](@ref). Recover bound information with [`similarity`](@ref) against
+    candidate hypervectors, or use [`FHRR`](@ref) or [`BipolarHV`](@ref) if you
+    need exact unbinding.
+
+# See also
+
+[`bind`](@ref), [`bundle`](@ref), [`similarity`](@ref)
 """
 unbind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
-unbind(hv1::HV, hv2::HV) where {HV <: Union{RealHV, FHRR}} = HV(hv1.v ./ hv2.v)
+unbind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v ./ hv2.v)
+unbind(::RealHV, ::RealHV) = throw(
+    ArgumentError(
+        "real-valued MAP binding is not exactly invertible; recover bound " *
+            "information with `similarity` against candidate hypervectors, or use " *
+            "`FHRR` or `BipolarHV` if you need exact unbinding"
+    )
+)
 Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 
 
@@ -198,7 +253,7 @@ Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 # --------
 
 # Shifting / Permutation
-shift!(hv::AbstractHV, k = 1) = circshift!(hv.v, k)
+shift!(hv::AbstractHV, k = 1) = (circshift!(hv.v, k); hv)
 
 function shift(hv::AbstractHV, k = 1)
     r = similar(hv)
@@ -222,7 +277,23 @@ end
 
 
 # Comparison
-Base.isequal(v::AbstractHV, u::AbstractHV) = v.v == u.v
+# Hypervectors of DIFFERENT types are never equal, even when their element
+# values coincide numerically (`true == 1` would otherwise make an all-true
+# BinaryHV equal an all-+1 BipolarHV, whose stored bits are the exact
+# opposite). Within one type, equality compares storage — a bijection to the
+# elements for every type — and TernaryHV{Int8} == TernaryHV{Int64} etc. still
+# compare by value via the family methods. Comparisons against plain
+# AbstractVectors keep Base's elementwise semantics, and hashing stays on the
+# AbstractArray element-based fallback so that `isequal(hv, v::Vector)` implies
+# equal hashes (a type-salted hash would break that contract).
+Base.:(==)(::AbstractHV, ::AbstractHV) = false
+Base.isequal(::AbstractHV, ::AbstractHV) = false
+Base.:(==)(u::HV, v::HV) where {HV <: AbstractHV} = u.v == v.v
+Base.isequal(u::HV, v::HV) where {HV <: AbstractHV} = isequal(u.v, v.v)
+for T in (:TernaryHV, :RealHV, :GradedHV, :GradedBipolarHV, :FHRR)
+    @eval Base.:(==)(u::$T, v::$T) = u.v == v.v
+    @eval Base.isequal(u::$T, v::$T) = isequal(u.v, v.v)
+end
 
 """
     Base.isapprox(u::AbstractHV, v::AbstractHV, atol=length(u)/100, ptol=0.01)
@@ -270,46 +341,59 @@ end
 
 
 # Perturbation
-function randbv(n::Int, m::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
+function randbv(n::Int, m::Int; rng::AbstractRNG = Random.default_rng())
     v = falses(n)
     v[1:m] .= true
     return shuffle!(rng, v)
 end
 
-function randbv(n::Int, p::Number; rng::AbstractRNG = Random.GLOBAL_RNG)
+function randbv(n::Int, p::Number; rng::AbstractRNG = Random.default_rng())
     @assert 0 ≤ p ≤ 1 "p should be a valid probability"
     return randbv(n, round(Int, p * n); rng = rng)
 end
 
-function randbv(n::Int, I; rng::AbstractRNG = Random.GLOBAL_RNG)
+function randbv(n::Int, I; rng::AbstractRNG = Random.default_rng())
     v = falses(n)
     v[I] .= true
     return v
 end
 
-function perturbate!(::Type{HVByteVec}, hv::HV, I, dist = eldist(hv); rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+function perturbate!(::Type{HVByteVec}, hv::HV, I, dist = eldist(hv); rng::AbstractRNG = Random.default_rng()) where {HV <: AbstractHV}
     hv.v[I] .= rand(rng, dist, length(I))
     return hv
 end
 
-function perturbate!(::Type{HVByteVec}, hv::HV, M::BitVector, dist = eldist(hv); rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+function perturbate!(::Type{HVByteVec}, hv::HV, M::BitVector, dist = eldist(hv); rng::AbstractRNG = Random.default_rng()) where {HV <: AbstractHV}
     hv.v[M] .= rand(rng, dist, sum(M))
     return hv
 end
 
-function perturbate!(::Type{HVByteVec}, hv::HV, p::Number, args...; rng::AbstractRNG = Random.GLOBAL_RNG) where {HV <: AbstractHV}
+function perturbate!(::Type{HVByteVec}, hv::HV, p::Number, args...; rng::AbstractRNG = Random.default_rng()) where {HV <: AbstractHV}
     return perturbate!(hv, randbv(length(hv), p; rng = rng), args...; rng = rng)
 end
 
-function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG = Random.GLOBAL_RNG)
+# FHRR elements live on the complex unit circle, so perturbation resamples the
+# phase at the selected positions instead of drawing from `eldist` (which would
+# produce invalid, non-unit-modulus elements).
+function perturbate!(::Type{HVByteVec}, hv::FHRR{Complex{R}}, I::AbstractVector{<:Integer}; rng::AbstractRNG = Random.default_rng()) where {R}
+    hv.v[I] .= exp.(2π * im .* rand(rng, R, length(I)))
+    return hv
+end
+
+function perturbate!(::Type{HVByteVec}, hv::FHRR{Complex{R}}, M::BitVector; rng::AbstractRNG = Random.default_rng()) where {R}
+    hv.v[M] .= exp.(2π * im .* rand(rng, R, sum(M)))
+    return hv
+end
+
+function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG = Random.default_rng())
     n = length(hv)
     M = randbv(n, binargs; rng = rng)
     hv.v .⊻= M
     return hv
 end
 
-perturbate!(hv, args...; rng::AbstractRNG = Random.GLOBAL_RNG) = perturbate!(vectype(hv), hv, args...; rng = rng)
-perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG, kwargs...) = perturbate!(copy(hv), args...; rng = rng, kwargs...)
+perturbate!(hv, args...; rng::AbstractRNG = Random.default_rng()) = perturbate!(vectype(hv), hv, args...; rng = rng)
+perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.default_rng(), kwargs...) = perturbate!(copy(hv), args...; rng = rng, kwargs...)
 
 # OTHER
 # -----

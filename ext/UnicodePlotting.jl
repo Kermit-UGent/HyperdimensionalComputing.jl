@@ -1,33 +1,43 @@
 module UnicodePlotting
 
-
 #=
-Representing the hypervectors using pretty printing
-and a custom plotting recipe
+Rich terminal display for hypervectors based on UnicodePlots.
+
+This extension deliberately defines NO `Base.show` methods: the single `show`
+method for `AbstractHV` lives in src/representations.jl and delegates to
+`_show_rich` here when the extension is loaded. Defining the same `show`
+signature in both places would be method overwriting, which is forbidden during
+precompilation.
 =#
 
-using StatsBase, UnicodePlots
+using UnicodePlots
 using HyperdimensionalComputing
+using HyperdimensionalComputing: AbstractHV
+import HyperdimensionalComputing: unicodeheatmap, unicodehistogram
+
+# Values used for plotting: the element values, or the phases for FHRR.
+plotvalues(hv::AbstractHV) = collect(hv)
+plotvalues(hv::FHRR) = angle.(hv.v)
 
 function unicodeheatmap(hv::AbstractHV)
-    N = length(hv)
-    nsq = floor(Int, sqrt(N))
-    Np = nsq^2
-    return heatmap(reshape(hv[1:Np], (nsq, nsq)))
+    vals = plotvalues(hv)
+    nsq = floor(Int, sqrt(length(vals)))
+    return heatmap(reshape(vals[1:(nsq^2)], (nsq, nsq)))
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", hv::AbstractHV)
-    println(io, "$(length(hv))-element $(typeof(hv))")
-    println(io, "mean ± std : $(round(mean(hv), digits = 3)) ± $(round(std(hv), digits = 3))")
-    println(io, UnicodePlotting.histogram(hv.v))
-    return println(io, unicodeheatmap(hv))
+unicodehistogram(hv::AbstractHV) = histogram(plotvalues(hv))
+
+function unicodehistogram(hv::Union{BinaryHV, BipolarHV, TernaryHV})
+    counts = Dict(string(x) => count(==(x), hv) for x in unique(collect(hv)))
+    return barplot(counts)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", hv::Union{BinaryHV, BipolarHV})
-    counts = Dict(string(e) => count(==(e), hv) for e in unique(hv))
-    println(io, "$(length(hv))-element $(typeof(hv))")
-    println(io, barplot(counts))
-    return println(io, unicodeheatmap(hv))
+# Called by `Base.show(io, ::MIME"text/plain", ::AbstractHV)` in
+# src/representations.jl when this extension is loaded.
+function _show_rich(io::IO, ::MIME"text/plain", hv::AbstractHV)
+    println(io, summary(hv), ":")
+    println(io, unicodehistogram(hv))
+    return print(io, unicodeheatmap(hv))
 end
 
 end

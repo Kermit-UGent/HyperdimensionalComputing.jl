@@ -43,168 +43,99 @@ or in the package mode (by pressing `]`):
 
 ## Usage
 
-Several vector symbolic architectures are implemented (see `?AbstractHV` for all subtypes),
-having different interfaces for hypervector creation:
+### Creating hypervectors
+
+Several vector symbolic architectures are implemented (see `?AbstractHV` for all subtypes).
+They all share the same constructor convention:
 
 ```julia
 using HyperdimensionalComputing
 
-julia> x = BinaryHV() # default length is 10,000
-10000-element BinaryHV:
- 1
- 0
- 0
- 0
- 0
- 1
- 1
- 0
- ⋮
- 1
- 0
- 1
- 0
- 1
- 0
- 0
- 0
-
-julia> y = BipolarHV(6) # different size
-6-element BipolarHV:
-  1
- -1
-  1
-  1
- -1
-  1
-
-julia> z = TernaryHV([1, 1, -1, 0, 0, 0, 1, 1, -1, 0]) # From a vector
-10-element TernaryHV:
-  1
-  1
- -1
-  0
-  0
-  0
-  1
-  1
- -1
-  0
+x = BinaryHV()                                    # fresh random hypervector, 10,000 dimensions
+y = BipolarHV(; D = 64)                           # dimensionality is set with the keyword D
+z = TernaryHV([1, 1, -1, 0, 0, 0, 1, 1, -1, 0])   # wrap an existing vector
 ```
 
-Hypervectors can be combined to represent more complex structures.  The basic operations are
-`bundle` (creating a vector that is similar to the provided vectors), `bind` (creating a vector
-that is dissimilar to the vectors) and `shift` (shifting the vector to create a new vector). For
-`aggregate` and `bind`, we overload `+` and `*` as binary operators, while `ρ` (`\rho`) is an
-alias for `shift`. For each VSA
+`encode(HV, x)` turns any object into a deterministic hypervector (seeded by `hash(x)`), and
+`HV(x)` is shorthand for it. Any token — a symbol, string, or character — gets its own
+reproducible, quasi-orthogonal hypervector:
 
 ```julia
-julia> x, y, z = GradedHV(10), GradedHV(10), GradedHV(10);
+julia> cat = BipolarHV(:cat)
+10000-element BipolarHV with 5078 positives and 4922 negatives:
+ -1
+ -1
+ -1
+  ⋮
+ -1
+  1
 
-julia> bundle([x,y,z])
-10-element GradedHV{Float64}:
- 0.24160752324192117
- 0.0004620105852614061
- 0.21122703146393468
- 0.8806160209097325
- 0.748086047467331
- 0.29234791431258145
- 0.2804922831134219
- 0.18556141274368268
- 0.08208462507331278
- 0.9015873952761569
+julia> cat == BipolarHV(:cat)  # the same object always yields the same hypervector
+true
 
-julia> x + y + z
-10-element GradedHV{Float64}:
- 0.24160752324192117
- 0.0004620105852614061
- 0.21122703146393468
- 0.8806160209097325
- 0.748086047467331
- 0.29234791431258145
- 0.2804922831134219
- 0.18556141274368268
- 0.08208462507331278
- 0.9015873952761569
+julia> similarity(cat, BipolarHV(:dog))  # different objects are quasi-orthogonal
+0.001
+```
+
+> [!IMPORTANT]
+> A number is never a dimension — and never a constructor token: `BinaryHV(6)` throws,
+> because it is ambiguous. Use `BinaryHV(; D = 6)` for a 6-dimensional random hypervector,
+> or `encode(BinaryHV, 6)` to encode the number 6 as a token.
+
+Sequences are encoded through `encode` with a strategy — thin compositions of the
+combinators below:
+
+```julia
+dna = encode(BinaryHV, "ACGTGGCTA", KMer(3))      # k-mer profile: substrings as atomic tokens
+txt = encode(BinaryHV, "hello world", NGram(3))   # symbol-level n-grams via shift-binding
+```
+
+### Operations
+
+Hypervectors can be combined to represent more complex structures. The basic operations are
+`bundle` (creating a vector that is similar to the provided vectors), `bind` (creating a vector
+that is dissimilar to the vectors) and `shift` (cyclically shifting the vector, used to encode
+position). For `bundle` and `bind`, we overload `+` and `*` as binary operators, while `ρ`
+(`\rho`) is an alias for `shift`. Each VSA uses its own implementation of these operations.
+
+```julia
+julia> x, y, z = GradedHV(; D = 5), GradedHV(; D = 5), GradedHV(; D = 5);
+
+julia> bundle([x, y, z])
+5-element GradedHV{Float64} with μ ± σ = 0.786 ± 0.435:
+ 0.9980386053693185
+ 0.9994897128289538
+ 0.9696790867890732
+ 0.008871444428233321
+ 0.9548707362741092
+
+julia> x + y + z == bundle([x, y, z])
+true
 
 julia> bind([x, y, z])
-10-element GradedHV{Float64}:
- 0.5061620120454368
- 0.26070792597812487
- 0.513025014409134
- 0.4717013369896599
- 0.49961155414024105
- 0.46309236900588013
- 0.5006006610486007
- 0.533210817253628
- 0.529186380757248
- 0.46622954535393824
+5-element GradedHV{Float64} with μ ± σ = 0.536 ± 0.232:
+ 0.5340650961987313
+ 0.3071283370775813
+ 0.5324987246729835
+ 0.9135871730556507
+ 0.3929268002269075
 
-julia> x * y * z
-10-element GradedHV{Float64}:
- 0.5061620120454368
- 0.26070792597812487
- 0.513025014409134
- 0.4717013369896599
- 0.49961155414024105
- 0.46309236900588013
- 0.5006006610486007
- 0.533210817253628
- 0.529186380757248
- 0.46622954535393824
+julia> x * y * z == bind([x, y, z])
+true
 
 julia> shift(x, 2)
-10-element GradedHV{Float64}:
- 0.6572388961520694
- 0.38592896770130286
- 0.5732316268033676
- 0.1280407117618328
- 0.13125571831454053
- 0.40139428175287556
- 0.5286213065298765
- 0.1038774285737532
- 0.43575817327464744
- 0.32479919832749704
+5-element GradedHV{Float64} with μ ± σ = 0.899 ± 0.157:
+ 0.9857814092925962
+ 0.9345994482275566
+ 0.9844262541167156
+ 0.9709891727120051
+ 0.6206103652316713
 
-julia> ρ(x, 2)
-10-element GradedHV{Float64}:
- 0.6572388961520694
- 0.38592896770130286
- 0.5732316268033676
- 0.1280407117618328
- 0.13125571831454053
- 0.40139428175287556
- 0.5286213065298765
- 0.1038774285737532
- 0.43575817327464744
- 0.32479919832749704
-
-julia> shift!(x, 2)
-10-element Vector{Float64}:
- 0.6572388961520694
- 0.38592896770130286
- 0.5732316268033676
- 0.1280407117618328
- 0.13125571831454053
- 0.40139428175287556
- 0.5286213065298765
- 0.1038774285737532
- 0.43575817327464744
- 0.32479919832749704
-
-julia> x
-10-element GradedHV{Float64}:
- 0.6572388961520694
- 0.38592896770130286
- 0.5732316268033676
- 0.1280407117618328
- 0.13125571831454053
- 0.40139428175287556
- 0.5286213065298765
- 0.1038774285737532
- 0.43575817327464744
- 0.32479919832749704
+julia> ρ(x, 2) == shift(x, 2)
+true
 ```
+
+In-place variants `shift!`, `ρ!`, `perturbate!` and `normalize!` are also available.
 
 Additionally, we provide common encoder strategies for different data structures:
 
@@ -218,24 +149,24 @@ Additionally, we provide common encoder strategies for different data structures
 - `graph`
 - `level`
 
-Finally, `similarity` function can be used to compute two hypervectors, by default using the
-best similarity metric for the hypervector type:
+Finally, the `similarity` function can be used to compare two hypervectors, by default using
+the best similarity metric for the hypervector type:
 
 ```
-julia> a = GradedBipolarHV(10);
+julia> a = GradedBipolarHV(:a);
 
-julia> b = GradedBipolarHV(10);
+julia> b = GradedBipolarHV(:b);
 
-julia> c = a + b;
+julia> c = a + b;  # bundling preserves similarity to the inputs
 
 julia> similarity(a, b)
-0.7857595020921353
+0.007006016597693629
 
 julia> similarity(a, c)
-0.9241024788902716
+0.6740992305784635
 
 julia> similarity(b, c)
-0.9295606930584789
+0.6824065675304283
 ```
 
 For more information, refer to the documentation.

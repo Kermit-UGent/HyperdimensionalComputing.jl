@@ -8,30 +8,30 @@ Multiset of input hypervectors, bundles all the input hypervectors together.
 
 # Example
 ```
-julia> vs = [BinaryHV(10) for _ in 1:10]
+julia> vs = BinaryHV.('a':'j'; D = 10)  # a hypervector for each character
 10-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 1, 0, 1, 1, 1]
- [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
- [0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
- [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
- [1, 1, 0, 0, 1, 0, 1, 1, 1, 0]
- [0, 0, 1, 1, 1, 1, 0, 0, 1, 0]
- [0, 0, 0, 0, 1, 1, 0, 1, 1, 0]
- [1, 1, 1, 0, 1, 1, 0, 0, 1, 1]
- [1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
- [1, 1, 0, 0, 0, 1, 1, 0, 0, 0]
+ 10-element BinaryHV with 5 true and 5 false
+ 10-element BinaryHV with 6 true and 4 false
+ 10-element BinaryHV with 3 true and 7 false
+ 10-element BinaryHV with 6 true and 4 false
+ 10-element BinaryHV with 3 true and 7 false
+ 10-element BinaryHV with 6 true and 4 false
+ 10-element BinaryHV with 4 true and 6 false
+ 10-element BinaryHV with 3 true and 7 false
+ 10-element BinaryHV with 5 true and 5 false
+ 10-element BinaryHV with 3 true and 7 false
 
 julia> multiset(vs)
-10-element BinaryHV:
- 0
- 1
- 0
- 0
+10-element BinaryHV with 3 true and 7 false:
  1
  0
  0
  0
+ 0
+ 0
  1
+ 1
+ 0
  0
 ```
 
@@ -68,31 +68,20 @@ Binding of multiple hypervectors, binds all the input hypervectors together.
 
 # Examples
 ```
-julia> vs = [BinaryHV(10) for _ in 1:10]
-10-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 1, 0, 1, 1, 1]
- [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
- [0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
- [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
- [1, 1, 0, 0, 1, 0, 1, 1, 1, 0]
- [0, 0, 1, 1, 1, 1, 0, 0, 1, 0]
- [0, 0, 0, 0, 1, 1, 0, 1, 1, 0]
- [1, 1, 1, 0, 1, 1, 0, 0, 1, 1]
- [1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
- [1, 1, 0, 0, 0, 1, 1, 0, 0, 0]
+julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> multibind(vs)
-10-element BinaryHV:
+10-element BinaryHV with 4 true and 6 false:
  1
- 1
+ 0
+ 0
+ 0
+ 0
+ 0
  1
  0
  1
  1
- 1
- 0
- 1
- 0
 ```
 
 # Extended help
@@ -129,31 +118,20 @@ Bundling-based sequence. The first value is not permuted, the last value is perm
 
 # Examples
 ```
-julia> vs = [BinaryHV(10) for _ in 1:10]
-10-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 1, 0, 1, 1, 1]
- [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
- [0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
- [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
- [1, 1, 0, 0, 1, 0, 1, 1, 1, 0]
- [0, 0, 1, 1, 1, 1, 0, 0, 1, 0]
- [0, 0, 0, 0, 1, 1, 0, 1, 1, 0]
- [1, 1, 1, 0, 1, 1, 0, 0, 1, 1]
- [1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
- [1, 1, 0, 0, 0, 1, 1, 0, 0, 0]
+julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> bundlesequence(vs)
-10-element BinaryHV:
- 0
- 1
- 0
- 0
- 0
+10-element BinaryHV with 4 true and 6 false:
  0
  0
  0
  1
  1
+ 0
+ 1
+ 1
+ 0
+ 0
 ```
 
 # Extended help
@@ -191,27 +169,16 @@ Binding-based sequence. The first value is not permuted, the last value is permu
 
 # Examples
 ```
-julia> vs = [BinaryHV(10) for _ in 1:10]
-10-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 1, 0, 1, 1, 1]
- [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
- [0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
- [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
- [1, 1, 0, 0, 1, 0, 1, 1, 1, 0]
- [0, 0, 1, 1, 1, 1, 0, 0, 1, 0]
- [0, 0, 0, 0, 1, 1, 0, 1, 1, 0]
- [1, 1, 1, 0, 1, 1, 0, 0, 1, 1]
- [1, 1, 0, 1, 1, 0, 0, 0, 0, 0]
- [1, 1, 0, 0, 0, 1, 1, 0, 0, 0]
+julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> bindsequence(vs)
-10-element BinaryHV:
+10-element BinaryHV with 6 true and 4 false:
+ 1
+ 0
  0
  1
  1
  0
- 1
- 1
  0
  1
  1
@@ -255,34 +222,22 @@ to encode as hypervector.
 
 # Example
 ```
-julia> ks = [BinaryHV(10) for _ in 1:5]
-5-element Vector{BinaryHV}:
- [0, 0, 0, 1, 0, 1, 1, 0, 0, 0]
- [1, 0, 1, 0, 1, 0, 1, 0, 1, 1]
- [0, 0, 0, 0, 1, 1, 1, 0, 1, 1]
- [1, 0, 0, 0, 0, 1, 1, 0, 1, 0]
- [0, 1, 1, 1, 1, 0, 0, 1, 1, 1]
+julia> ks = BinaryHV.([:name, :age, :city]; D = 10);  # key hypervectors
 
-julia> vs = [BinaryHV(10) for _ in 1:5]
-5-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 1, 0, 1, 0, 0]
- [1, 0, 1, 1, 1, 0, 1, 0, 0, 0]
- [0, 0, 0, 0, 0, 1, 1, 0, 1, 0]
- [0, 1, 1, 0, 0, 0, 0, 1, 0, 1]
- [0, 1, 1, 0, 0, 0, 1, 1, 0, 1]
+julia> vs = BinaryHV.(["Alice", "42", "Ghent"]; D = 10);  # value hypervectors
 
 julia> hashtable(ks, vs)
-10-element BinaryHV:
+10-element BinaryHV with 3 true and 7 false:
  0
  0
  0
  1
  1
  0
- 1
+ 0
  0
  1
- 1
+ 0
 ```
 
 # Extended help
@@ -318,34 +273,22 @@ Cross product between two sets of hypervectors.
 
 # Examples
 ```
-julia> us = [BinaryHV(10) for _ in 1:5]
-5-element Vector{BinaryHV}:
- [1, 1, 1, 1, 1, 0, 0, 1, 0, 0]
- [0, 1, 0, 0, 1, 1, 1, 0, 1, 0]
- [0, 1, 1, 1, 1, 0, 0, 1, 1, 1]
- [0, 1, 1, 0, 1, 0, 1, 1, 1, 0]
- [1, 0, 0, 1, 0, 0, 1, 1, 1, 1]
+julia> us = BinaryHV.('a':'e'; D = 10);
 
-julia> vs = [BinaryHV(10) for _ in 1:5]
-5-element Vector{BinaryHV}:
- [0, 1, 1, 1, 1, 1, 0, 1, 0, 0]
- [0, 0, 1, 0, 0, 1, 1, 0, 0, 1]
- [0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
- [1, 0, 1, 1, 0, 1, 1, 1, 1, 1]
- [1, 0, 1, 0, 0, 1, 0, 1, 0, 1]
+julia> vs = BinaryHV.('v':'z'; D = 10);
 
 julia> crossproduct(us, vs)
-10-element BinaryHV:
- 0
- 0
- 1
- 0
- 1
- 0
+10-element BinaryHV with 5 true and 5 false:
  0
  1
  0
  1
+ 0
+ 0
+ 1
+ 1
+ 1
+ 0
 ```
 
 # Extended help
@@ -385,30 +328,19 @@ Creates a hypervector with the _n_-gram statistics of the input.
 
 # Examples
 ```
-julia> vs = [BinaryHV(10) for _ in 1:10]
-10-element Vector{BinaryHV}:
- [0, 1, 0, 0, 1, 0, 1, 0, 0, 1]
- [0, 0, 1, 1, 1, 0, 0, 1, 1, 1]
- [0, 0, 1, 0, 0, 1, 1, 1, 0, 0]
- [1, 0, 0, 0, 1, 0, 0, 1, 1, 1]
- [0, 1, 0, 0, 1, 0, 1, 1, 0, 0]
- [1, 1, 1, 0, 1, 0, 0, 1, 0, 1]
- [1, 0, 0, 0, 1, 0, 0, 1, 1, 0]
- [0, 1, 0, 1, 0, 0, 0, 1, 1, 0]
- [0, 0, 0, 1, 1, 1, 1, 0, 0, 1]
- [1, 1, 0, 0, 0, 1, 1, 1, 0, 1]
+julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> ngrams(vs)
-10-element BinaryHV:
+10-element BinaryHV with 5 true and 5 false:
  1
- 1
- 1
- 1
- 1
+ 0
+ 0
  1
  0
  1
  0
+ 0
+ 1
  1
 ```
 
@@ -459,6 +391,22 @@ Graph for `source`-`target` pairs. Can be directed or undirected.
 - `directed::Bool = false`: Whether the graph is directed or not
 
 # Example
+```
+julia> nodes = BinaryHV.('a':'d'; D = 10);  # a hypervector for each node
+
+julia> graph(nodes[[1, 1, 2, 3]], nodes[[2, 3, 4, 4]])  # edges a-b, a-c, b-d, c-d
+10-element BinaryHV with 2 true and 8 false:
+ 0
+ 1
+ 0
+ 0
+ 0
+ 1
+ 0
+ 0
+ 0
+ 0
+```
 
 # Extended help
 
@@ -580,7 +528,9 @@ decoder = decodelevel(hvlevels, numvalues)
 decoder(hvlevels[17])  # value that closely matches the corresponding HV
 ```
 """
-function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues)
+function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues; testbound = false)
+    # `testbound` is accepted (and ignored) for symmetry with `encodelevel`, so
+    # that the generic instance-based methods can forward keywords to both.
     @assert length(hvlevels) == length(numvalues) "HV levels do not match numerical values"
     # construct the decoder
     function decoder(hv::AbstractHV)
@@ -590,7 +540,7 @@ function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues)
     return decoder
 end
 
-decodelevel(hvlevels::AbstractVector{<:AbstractHV}, a::Number, b::Number) = decodelevel(hvlevels, range(a, b, length(hvlevels)))
+decodelevel(hvlevels::AbstractVector{<:AbstractHV}, a::Number, b::Number; testbound = false) = decodelevel(hvlevels, range(a, b, length(hvlevels)); testbound)
 
 decodelevel(HV, numvalues; testbound = false) = decodelevel(level(HV, length(numvalues)), numvalues; testbound)
 

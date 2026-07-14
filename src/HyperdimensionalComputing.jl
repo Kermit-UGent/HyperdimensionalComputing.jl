@@ -16,6 +16,8 @@ export AbstractHV,
     FHRR
 
 include("representations.jl")
+export unicodeheatmap,
+    unicodehistogram
 
 include("operations.jl")
 export bundle,
@@ -45,6 +47,14 @@ export multiset,
     encodelevel,
     decodelevel,
     convertlevel
+
+include("encode.jl")
+export encode,
+    AbstractEncoding,
+    KMer,
+    NGram,
+    Sequence,
+    BagOfSymbols
 
 include("inference.jl")
 export similarity,
