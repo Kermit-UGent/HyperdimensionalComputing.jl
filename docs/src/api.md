@@ -6,36 +6,52 @@ CurrentModule = HyperdimensionalComputing
 
 This page contains the complete API reference for HyperdimensionalComputing.jl.
 
-## Index
-
-```@index
-Pages = ["api.md"]
-```
-
-## Functions
-
-```@autodocs
-Modules = [HyperdimensionalComputing]
-Order = [:function]
-```
-
 ## Types
-
-```@autodocs
-Modules = [HyperdimensionalComputing]
-Order = [:type]
+```@docs
+AbstractHV
+BinaryHV
+BipolarHV
+TernaryHV
+GradedBipolarHV
+RealHV
+GradedHV
+FHRR
 ```
 
-## Constants
-
-```@autodocs
-Modules = [HyperdimensionalComputing]
-Order = [:constant]
+## Operations
+```@docs
+normalize
+normalize!
+bundle
+bind
+unbind
+shift!
+shift
+ρ
+ρ!
+perturbate
+perturbate!
 ```
 
-## Macros
+## Inference
+```@docs
+similarity
+δ
+nearest_neighbor
+```
 
-```@autodocs
-Modules = [HyperdimensionalComputing]
-Order = [:macro]
+## Encoders
+```@docs
+multiset
+multibind
+bundlesequence
+bindsequence
+hashtable
+crossproduct
+ngrams
+graph
+level
+encodelevel
+decodelevel
+convertlevel
 ```

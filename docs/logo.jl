@@ -64,7 +64,7 @@ function make_logo(; seed = 42, spacing = 1.0, R = 6.5, ρ = 9.0)
     for (color, c) in lobes
         pts = disc_dots(c[1], c[2], R; spacing = spacing)
         sz = dot_sizes(rng, length(pts); spacing = spacing)
-        scatter!(ax, pts; markersize = sz, markerspace = :data, color = color, strokecolor = :transparent)
+        scatter!(ax, pts; markersize = sz, markerspace = :data, color = color, strokecolor=:transparent)
     end
 
     limits!(ax, -ρ - R - 1, ρ + R + 1, -ρ * sind(30) - R - 1, ρ + R + 1)
