@@ -48,6 +48,7 @@ H_features = [SEPALLENGTH, SEPALWIDTH, PETALLENGTH, PETALWIDTH]
 # We lay out one level every 0.1 cm across the observed range:
 
 cm = range(extrema(X)...; step = 0.1)
+#
 H_cm = level(BinaryHV, length(cm))
 
 # [`encodelevel`](@ref) turns that ladder into a ready-to-use function mapping any number to its

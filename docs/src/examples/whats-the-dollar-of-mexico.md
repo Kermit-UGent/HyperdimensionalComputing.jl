@@ -21,9 +21,9 @@ mapping one concept into another space or directly map a mapping function from o
 another, basically mimicking how the brain works:
 
 > The literal image created by the words is intended to be transferred to and interpreted in a
-  new context, exemplifying the mind's reliance on prototypes: the literal meaning provides the
-  prototype. When the mind expands its scope in this way it creates an incredibly rich web of
-  associations and meaning...
+> new context, exemplifying the mind's reliance on prototypes: the literal meaning provides the
+> prototype. When the mind expands its scope in this way it creates an incredibly rich web of
+> associations and meaning...
 
 To showcase this, we will reimplement the example proposed by Kanerva on this paper.
 
@@ -35,26 +35,26 @@ In HDC, concepts are represented as high-dimensional random vectors (hypervector
 Here, we create hypervectors for the abstract concepts of COUNTRY, CAPITAL, and MONEY.
 
 ````@example whats-the-dollar-of-mexico
-COUNTRY = BipolarHV(:country)
-CAPITAL = BipolarHV(:capital)
-MONEY = BipolarHV(:money)
+COUNTRY = BinaryHV(:country)
+CAPITAL = BinaryHV(:capital)
+MONEY = BinaryHV(:money)
 
-COUNTRY, CAPITAL, MONEY
+[COUNTRY, CAPITAL, MONEY]
 ````
 
 Next, we create hypervectors for specific instances: countries, their capitals, and currencies.
 
 ````@example whats-the-dollar-of-mexico
-USA = BipolarHV(:usa)
-MEX = BipolarHV(:mexico)
+USA = BinaryHV(:usa)
+MEX = BinaryHV(:mexico)
 
-WDC = BipolarHV(:wdc)      # Washington DC
-MXC = BipolarHV(:mxc)      # Mexico City
+WDC = BinaryHV(:wdc)      # Washington DC
+MXC = BinaryHV(:mxc)      # Mexico City
 
-DOL = BipolarHV(:dollar)
-PES = BipolarHV(:peso)
+DOL = BinaryHV(:dollar)
+PES = BinaryHV(:peso)
 
-USA, MEX, WDC, MXC, DOL, PES
+[USA, MEX, WDC, MXC, DOL, PES]
 ````
 
 We now build holistic representations for the United States and Mexico by binding each concept
@@ -64,7 +64,7 @@ We now build holistic representations for the United States and Mexico by bindin
 USTATES = (COUNTRY * USA) + (CAPITAL * WDC) + (MONEY * DOL)
 MEXICO = (COUNTRY * MEX) + (CAPITAL * MXC) + (MONEY * PES)
 
-USTATES, MEXICO
+[USTATES, MEXICO]
 ````
 
 These composite hypervectors encode all the information about each country in a single vector.
@@ -99,9 +99,9 @@ DOL * F_UM ≈ PES
 Let's add another country, Sweden, with its capital and currency.
 
 ````@example whats-the-dollar-of-mexico
-SWE = BipolarHV(:sweden)
-STO = BipolarHV(:stockholm)
-SEK = BipolarHV(:krona)
+SWE = BinaryHV(:sweden)
+STO = BinaryHV(:stockholm)
+SEK = BinaryHV(:krona)
 
 SWEDEN = (COUNTRY * SWE) + (CAPITAL * STO) + (MONEY * SEK)
 ````

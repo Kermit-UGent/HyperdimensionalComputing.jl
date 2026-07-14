@@ -59,6 +59,9 @@ We lay out one level every 0.1 cm across the observed range:
 
 ````@example iris
 cm = range(extrema(X)...; step = 0.1)
+````
+
+````@example iris
 H_cm = level(BinaryHV, length(cm))
 ````
 
