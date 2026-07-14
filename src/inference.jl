@@ -81,7 +81,7 @@ similarity(u::AbstractHV; kwargs...) = v -> similarity(u, v; kwargs...)
 
 Alias for `similarity`. See `similarity` for the main documentation.
 """
-δ = similarity
+const δ = similarity
 
 
 nearest_neighbor(u::AbstractHV, collection; kwargs...) =
