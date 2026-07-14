@@ -119,7 +119,11 @@ Random.seed!(42)
             @test shift!(hv, 3) === hv
             @test ρ!(hv) === hv
             @test normalize!(hv) === hv
+            # every perturbate! argument form: count, fraction, mask, indices
             @test perturbate!(hv, 2) === hv
+            @test perturbate!(hv, 0.1) === hv
+            @test perturbate!(hv, bitrand(length(hv))) === hv
+            @test perturbate!(hv, [1, 3]) === hv
         end
     end
 
@@ -173,7 +177,14 @@ Random.seed!(42)
         @test hvp isa FHRR
         @test all(abs.(hvp.v) .≈ 1)
         @test count(hvp.v .!= hv1.v) == 10   # exactly n positions resampled
-        @test perturbate(hv1, 0.2) isa FHRR
+        hvf = perturbate(hv1, 0.2)
+        @test hvf isa FHRR
+        @test all(abs.(hvf.v) .≈ 1)
+        # untouched positions carry similarity 1, resampled ones ≈ 0 in
+        # expectation, so similarity degrades to roughly 1 - p
+        hvbig = FHRR(; D = 10_000)
+        @test similarity(hvbig, perturbate(hvbig, 0.2)) ≈ 0.8 atol = 0.05
+        @test similarity(hvbig, perturbate(hvbig, 0.5)) ≈ 0.5 atol = 0.05
         m = bitrand(length(hv1))
         hvm = perturbate(hv1, m; rng = Xoshiro(1))
         @test all(hvm.v[.!m] .== hv1.v[.!m])
