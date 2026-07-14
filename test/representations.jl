@@ -8,19 +8,19 @@ using Random: Xoshiro
     plain(hv) = repr(MIME"text/plain"(), hv)
 
     @testset "headers" begin
-        @test occursin(r"^100-element BinaryHV with \d+ true and \d+ false:", plain(BinaryHV(; D=100)))
-        @test occursin(r"^100-element BipolarHV with \d+ positives and \d+ negatives:", plain(BipolarHV(; D=100)))
-        @test occursin(r"^100-element TernaryHV\{Int64\} with \d+ positives, \d+ zeros, and \d+ negatives:", plain(TernaryHV(; D=100)))
+        @test occursin(r"^100-element BinaryHV with \d+ true and \d+ false:", plain(BinaryHV(; D = 100)))
+        @test occursin(r"^100-element BipolarHV with \d+ positives and \d+ negatives:", plain(BipolarHV(; D = 100)))
+        @test occursin(r"^100-element TernaryHV\{Int64\} with \d+ positives, \d+ zeros, and \d+ negatives:", plain(TernaryHV(; D = 100)))
         for HV in [RealHV, GradedHV, GradedBipolarHV]
-            @test occursin(Regex("^100-element $HV.* with μ ± σ = "), plain(HV(; D=100)))
+            @test occursin(Regex("^100-element $HV.* with μ ± σ = "), plain(HV(; D = 100)))
         end
         # FHRR gets Base's plain header: mean/std of unit-circle complex numbers
         # carry no information, so no statistic is shown
-        @test occursin(r"^100-element FHRR\{ComplexF64\}:", plain(FHRR(; D=100)))
+        @test occursin(r"^100-element FHRR\{ComplexF64\}:", plain(FHRR(; D = 100)))
     end
 
     @testset "elements and truncation" begin
-        hv = BipolarHV(; D=19, rng=Xoshiro(1))
+        hv = BipolarHV(; D = 19, rng = Xoshiro(1))
 
         # untruncated: header plus one line per element, printed by Base
         s = plain(hv)
@@ -36,7 +36,7 @@ using Random: Xoshiro
     end
 
     @testset "vectors of hypervectors" begin
-        vs = [BinaryHV(; D=10) for _ in 1:3]
+        vs = [BinaryHV(; D = 10) for _ in 1:3]
         sv = repr(MIME"text/plain"(), vs)
         @test occursin("3-element Vector{BinaryHV}:", sv)
         @test count("-element BinaryHV with", sv) == 3
@@ -57,7 +57,7 @@ using Random: Xoshiro
         # uniform across all types: non-scalar indexing returns element values
         # in a plain vector, never a new hypervector
         for HV in [BinaryHV, BipolarHV, TernaryHV, RealHV, GradedHV, GradedBipolarHV, FHRR]
-            h = HV(; D=20)
+            h = HV(; D = 20)
             @test h[3] isa eltype(h)   # getindex must return the type parameter T
             @test h[3] == collect(h)[3]
             @test h[2:6] == collect(h)[2:6]

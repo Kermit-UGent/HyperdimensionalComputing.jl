@@ -91,19 +91,19 @@ julia> length(BinaryHV(:cat; D = 100))    # dimensionality is set with the keywo
 """
 abstract type AbstractHV{T} <: AbstractVector{T} end
 
-Base.copy(hv::HV) where {HV<:AbstractHV} = HV(copy(hv.v))
+Base.copy(hv::HV) where {HV <: AbstractHV} = HV(copy(hv.v))
 # Scalar indexing returns the element value; non-scalar indexing (ranges, index
 # vectors, logical masks) returns a plain Vector of element values, NOT a new
 # hypervector — a slice of a hypervector is not a meaningful hypervector.
 Base.getindex(hv::AbstractHV, i::Integer) = hv.v[i]
 Base.getindex(hv::AbstractHV, I::AbstractVector) = hv.v[I]
-Base.similar(hv::HV) where {HV<:AbstractHV} = HV(; D=length(hv))
+Base.similar(hv::HV) where {HV <: AbstractHV} = HV(; D = length(hv))
 Base.size(hv::AbstractHV) = size(hv.v)
 Base.sum(hv::AbstractHV) = sum(hv.v)
 
 LinearAlgebra.norm(hv::AbstractHV) = norm(hv.v)
 normalize!(hv::AbstractHV) = hv
-normalize(hv::AbstractHV) = (c=copy(hv); normalize!(c); c)
+normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 
 eldist(hv::AbstractHV) = eldist(typeof(hv))
 empty_vector(hv::AbstractHV) = zero(hv.v)
@@ -115,8 +115,8 @@ warn_integer_token(HV::Type, this) = nothing
 warn_integer_token(HV::Type, this::Bool) = nothing
 function warn_integer_token(HV::Type, this::Integer)
     @warn "`$HV($this)` encodes the *object* `$this` as a hypervector — the positional " *
-          "argument is never the dimensionality. Use `$HV(; D = $this)` to set the number " *
-          "of dimensions instead. (This warning is only shown once per session.)" maxlog = 1 _id = :hv_integer_token
+        "argument is never the dimensionality. Use `$HV(; D = $this)` to set the number " *
+        "of dimensions instead. (This warning is only shown once per session.)" maxlog = 1 _id = :hv_integer_token
     return nothing
 end
 
@@ -195,18 +195,18 @@ end
 
 # Outer constructors
 function BipolarHV(;
-    D::Integer=10_000,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return BipolarHV(bitrand(rng_instance, D))
 end
 
 function BipolarHV(
-    this::Any;
-    D::Integer=10_000
-)
+        this::Any;
+        D::Integer = 10_000
+    )
     warn_integer_token(BipolarHV, this)
     rng_instance = Xoshiro(hash(this))
     return BipolarHV(bitrand(rng_instance, D))
@@ -318,49 +318,49 @@ julia> normalize(x + y)
 
 - Gayler, R. W. (1998). Multiplicative Binding, Representation Operators & Analogy. In Advances in Analogy Research: Integration of Theory and Data from the Cognitive, Computational, and Neural Sciences, 1–4.
 """
-struct TernaryHV{T<:Integer} <: AbstractHV{T}
+struct TernaryHV{T <: Integer} <: AbstractHV{T}
     v::Vector{T}
 
     # Inner constructor for same type
-    TernaryHV{T}(v::AbstractVector{T}) where {T<:Integer} = new{T}(v)
+    TernaryHV{T}(v::AbstractVector{T}) where {T <: Integer} = new{T}(v)
     # Inner constructor for type conversion
-    TernaryHV{T}(v::AbstractVector{<:Integer}) where {T<:Integer} = new{T}(convert(Vector{T}, v))
+    TernaryHV{T}(v::AbstractVector{<:Integer}) where {T <: Integer} = new{T}(convert(Vector{T}, v))
 end
 
 # Outer constructor that infers type from input
-TernaryHV(v::AbstractVector{T}) where {T<:Integer} = TernaryHV{T}(v)
+TernaryHV(v::AbstractVector{T}) where {T <: Integer} = TernaryHV{T}(v)
 
 function TernaryHV(;
-    D::Integer=10_000,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
 function TernaryHV(
-    this::Any;
-    D::Integer=10_000
-)
+        this::Any;
+        D::Integer = 10_000
+    )
     warn_integer_token(TernaryHV, this)
     rng_instance = Xoshiro(hash(this))
     return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
 function TernaryHV{T}(;
-    D::Integer=10_000,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-) where {T<:Integer}
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    ) where {T <: Integer}
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
 end
 
 function TernaryHV{T}(
-    this::Any;
-    D::Integer=10_000
-) where {T<:Integer}
+        this::Any;
+        D::Integer = 10_000
+    ) where {T <: Integer}
     warn_integer_token(TernaryHV{T}, this)
     rng_instance = Xoshiro(hash(this))
     return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
@@ -368,7 +368,7 @@ end
 
 # Helpers
 Base.copy(hv::TernaryHV{T}) where {T} = TernaryHV{T}(copy(hv.v))
-Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D=length(hv))
+Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D = length(hv))
 normalize!(hv::TernaryHV) = (clamp!(hv.v, -1, 1); hv)
 eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
 
@@ -441,18 +441,18 @@ struct BinaryHV <: AbstractHV{Bool}
 end
 
 function BinaryHV(;
-    D::Integer=10_000,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return BinaryHV(bitrand(rng_instance, D))
 end
 
 function BinaryHV(
-    this::Any;
-    D::Integer=10_000
-)
+        this::Any;
+        D::Integer = 10_000
+    )
     warn_integer_token(BinaryHV, this)
     rng_instance = Xoshiro(hash(this))
     return BinaryHV(bitrand(rng_instance, D))
@@ -526,32 +526,32 @@ julia> RealHV(; D = 8, distr = Normal(0, 5), rng = Xoshiro(1))
 
 [`AbstractHV`](@ref), [`bundle`](@ref), [`bind`](@ref), [`similarity`](@ref)
 """
-struct RealHV{T<:Real} <: AbstractHV{T}
+struct RealHV{T <: Real} <: AbstractHV{T}
     v::Vector{T}
     distr::Distribution
 
     RealHV(
         v::AbstractVector{T},
-        distr::Distribution=eldist(RealHV)
-    ) where {T<:Real} = new{T}(v, distr)
+        distr::Distribution = eldist(RealHV)
+    ) where {T <: Real} = new{T}(v, distr)
 end
 
 # Constructors
 function RealHV(;
-    distr::Distribution=eldist(RealHV),
-    D::Integer=10_000,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        distr::Distribution = eldist(RealHV),
+        D::Integer = 10_000,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return RealHV(rand(rng_instance, distr, D), distr)
 end
 
 function RealHV(
-    this::Any;
-    D::Integer=10_000,
-    distr::Distribution=eldist(RealHV)
-)
+        this::Any;
+        D::Integer = 10_000,
+        distr::Distribution = eldist(RealHV)
+    )
     warn_integer_token(RealHV, this)
     rng_instance = Xoshiro(hash(this))
     return RealHV(rand(rng_instance, distr, D), distr)
@@ -559,7 +559,7 @@ end
 
 # Helpers
 Base.copy(hv::RealHV) = RealHV(copy(hv.v), hv.distr)
-Base.similar(hv::RealHV) = RealHV(; D=length(hv), distr=hv.distr)
+Base.similar(hv::RealHV) = RealHV(; D = length(hv), distr = hv.distr)
 function normalize!(hv::RealHV)
     hv.v .*= std(hv.distr) / std(hv.v)
     return hv
@@ -622,33 +622,33 @@ julia> GradedHV([1.0, 0.0, 0.5]) * GradedHV([1.0, 1.0, 1.0])
 
 [`AbstractHV`](@ref), [`GradedBipolarHV`](@ref), [`bundle`](@ref), [`bind`](@ref), [`similarity`](@ref)
 """
-struct GradedHV{T<:Real} <: AbstractHV{T}
+struct GradedHV{T <: Real} <: AbstractHV{T}
     v::Vector{T}
     distr::Distribution
 
     GradedHV(
         v::AbstractVector{T},
-        distr::Distribution=eldist(GradedHV)
-    ) where {T<:Real} = new{T}(clamp.(v, 0, 1), distr)
+        distr::Distribution = eldist(GradedHV)
+    ) where {T <: Real} = new{T}(clamp.(v, 0, 1), distr)
 end
 
 # Constructors
 function GradedHV(;
-    D::Integer=10_000,
-    distr::Distribution=eldist(GradedHV),
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        distr::Distribution = eldist(GradedHV),
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return GradedHV(rand(rng_instance, distr, D), distr)
 end
 
 function GradedHV(
-    this::Any;
-    D::Integer=10_000,
-    distr::Distribution=eldist(GradedHV)
-)
+        this::Any;
+        D::Integer = 10_000,
+        distr::Distribution = eldist(GradedHV)
+    )
     @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
     warn_integer_token(GradedHV, this)
     rng_instance = Xoshiro(hash(this))
@@ -657,7 +657,7 @@ end
 
 # Helpers
 Base.copy(hv::GradedHV) = GradedHV(copy(hv.v), hv.distr)
-Base.similar(hv::GradedHV) = GradedHV(; D=length(hv), distr=hv.distr)
+Base.similar(hv::GradedHV) = GradedHV(; D = length(hv), distr = hv.distr)
 Base.zeros(hv::GradedHV) = fill!(similar(hv.v), one(eltype(hv.v)) / 2)
 normalize!(hv::GradedHV) = (clamp!(hv.v, 0, 1); hv)
 eldist(::Type{<:GradedHV}) = Beta(1, 1)
@@ -720,32 +720,32 @@ julia> GradedBipolarHV([-1.0, 0.0, 1.0]) * GradedBipolarHV([1.0, 1.0, 1.0])
 
 [`AbstractHV`](@ref), [`GradedHV`](@ref), [`bundle`](@ref), [`bind`](@ref), [`similarity`](@ref)
 """
-struct GradedBipolarHV{T<:Real} <: AbstractHV{T}
+struct GradedBipolarHV{T <: Real} <: AbstractHV{T}
     v::Vector{T}
     distr::Distribution
 
     GradedBipolarHV(
         v::AbstractVector{T},
-        distr::Distribution=eldist(GradedBipolarHV)
-    ) where {T<:Real} = new{T}(clamp.(v, -1, 1), distr)
+        distr::Distribution = eldist(GradedBipolarHV)
+    ) where {T <: Real} = new{T}(clamp.(v, -1, 1), distr)
 end
 
 function GradedBipolarHV(;
-    D::Integer=10_000,
-    distr::Distribution=eldist(GradedBipolarHV),
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        distr::Distribution = eldist(GradedBipolarHV),
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return GradedBipolarHV(rand(rng_instance, distr, D), distr)
 end
 
 function GradedBipolarHV(
-    this::Any;
-    D::Integer=10_000,
-    distr::Distribution=eldist(GradedBipolarHV)
-)
+        this::Any;
+        D::Integer = 10_000,
+        distr::Distribution = eldist(GradedBipolarHV)
+    )
     @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
     warn_integer_token(GradedBipolarHV, this)
     rng_instance = Xoshiro(hash(this))
@@ -754,7 +754,7 @@ end
 
 # Helpers
 Base.copy(hv::GradedBipolarHV) = GradedBipolarHV(copy(hv.v), hv.distr)
-Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D=length(hv), distr=hv.distr)
+Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D = length(hv), distr = hv.distr)
 normalize!(hv::GradedBipolarHV) = (clamp!(hv.v, -1, 1); hv)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
@@ -817,23 +817,23 @@ true
 
 - Plate, T. A. (1995). Holographic Reduced Representations. IEEE Transactions on Neural Networks, 6(3), 623–641.
 """
-struct FHRR{T<:Complex} <: AbstractHV{T}
+struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
 end
 
 function FHRR(;
-    D::Integer=10_000,
-    T::Type=Float64,
-    seed::Union{Integer,Nothing}=nothing,
-    rng::AbstractRNG=Random.default_rng()
-)
+        D::Integer = 10_000,
+        T::Type = Float64,
+        seed::Union{Integer, Nothing} = nothing,
+        rng::AbstractRNG = Random.default_rng()
+    )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return FHRR(exp.(2π * im .* rand(rng_instance, T, D)))
 end
 
-function FHRR(this::Any; D::Integer=10_000, T::Type=Float64)
+function FHRR(this::Any; D::Integer = 10_000, T::Type = Float64)
     warn_integer_token(FHRR, this)
-    return FHRR(; T=T, D=D, seed=hash(this))
+    return FHRR(; T = T, D = D, seed = hash(this))
 end
 
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))
