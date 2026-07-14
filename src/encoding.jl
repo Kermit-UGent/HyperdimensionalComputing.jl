@@ -528,7 +528,9 @@ decoder = decodelevel(hvlevels, numvalues)
 decoder(hvlevels[17])  # value that closely matches the corresponding HV
 ```
 """
-function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues)
+function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues; testbound = false)
+    # `testbound` is accepted (and ignored) for symmetry with `encodelevel`, so
+    # that the generic instance-based methods can forward keywords to both.
     @assert length(hvlevels) == length(numvalues) "HV levels do not match numerical values"
     # construct the decoder
     function decoder(hv::AbstractHV)
@@ -538,7 +540,7 @@ function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues)
     return decoder
 end
 
-decodelevel(hvlevels::AbstractVector{<:AbstractHV}, a::Number, b::Number) = decodelevel(hvlevels, range(a, b, length(hvlevels)))
+decodelevel(hvlevels::AbstractVector{<:AbstractHV}, a::Number, b::Number; testbound = false) = decodelevel(hvlevels, range(a, b, length(hvlevels)); testbound)
 
 decodelevel(HV, numvalues; testbound = false) = decodelevel(level(HV, length(numvalues)), numvalues; testbound)
 

@@ -63,6 +63,20 @@
         @test hv isa BinaryHV
         x = decoder(hv)
         @test 1 ≤ x ≤ 2
+
+        # regression (TODO §1.4): the instance-based decodelevel/convertlevel
+        # path used to throw a MethodError caused by kwarg forwarding
+        dec = decodelevel(BinaryHV(; D = 100, seed = 3), numvals)
+        @test dec isa Function
+        enc2, dec2 = convertlevel(BinaryHV(; D = 100, seed = 3), numvals)
+        @test enc2(1.0) isa BinaryHV
+        @test minimum(numvals) ≤ dec2(enc2(1.0)) ≤ maximum(numvals)
+        # keywords also forward through the shared-ladder path
+        enc3, dec3 = convertlevel(levels, numvals; testbound = true)
+        @test dec3(enc3(1.467)) isa Number
+        # NOTE (TODO §1.4b): enc2/dec2 are built over *different* random ladders,
+        # so decode(encode(x)) ≈ x does not hold on the instance path — flagged,
+        # not asserted here.
     end
 
     @testset "FHRR numbers" begin
