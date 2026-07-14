@@ -64,7 +64,9 @@ Some types extend this interface with type-specific keywords, e.g. `distr` for
 `hv[1:3]`, `hv[[1, 4]]`, logical masks — returns a plain `Vector` of element
 values, *not* a new hypervector: information in a hypervector is distributed over
 all `D` dimensions, so a slice is not itself a meaningful hypervector.
-Hypervectors are immutable; there is no `setindex!`.
+Hypervectors are immutable; there is no `setindex!`. Equality (`==`/`isequal`)
+holds only between hypervectors of the same type — a `BinaryHV` never equals a
+`BipolarHV` — while comparison against plain vectors is elementwise.
 
 # Examples
 

@@ -48,6 +48,30 @@ using Logging: Logging
         @test !isequal(x, y)
         @test x != y
         @test !isequal(y, x)
+
+        # cross-type equality is strictly false, even when element values
+        # coincide numerically (true == 1): since the polarity flip, an all-true
+        # BinaryHV and an all-+1 BipolarHV have OPPOSITE stored bits
+        @test !isequal(BinaryHV(Bool[1, 0]), BipolarHV([1, -1]))
+        @test !isequal(BinaryHV(Bool[1, 1]), BipolarHV([1, 1]))
+        @test BinaryHV(Bool[1, 1]) != BipolarHV([1, 1])
+
+        # same family, different element type: compares by value
+        @test TernaryHV{Int8}(Int8[1, -1]) == TernaryHV{Int64}([1, -1])
+        @test isequal(TernaryHV{Int8}(Int8[1, -1]), TernaryHV{Int64}([1, -1]))
+
+        # hash/equality contract for every type — including BipolarHV, where
+        # storage and elements disagree; and against plain vectors, where
+        # elementwise isequal can be true and hashes must then match
+        for HV in [BinaryHV, BipolarHV, TernaryHV, RealHV, GradedHV, GradedBipolarHV, FHRR]
+            h = HV(; D = 20, seed = 5)
+            h2 = HV(; D = 20, seed = 5)
+            @test isequal(h, h2) && hash(h) == hash(h2)
+            @test isequal(h, collect(h)) && hash(h) == hash(collect(h))
+        end
+        p = BipolarHV([1, -1])
+        @test hash(p) == hash([1, -1])   # elements, not stored bits
+        @test hash(p) != hash(p.v)
     end
 
     @testset "BipolarHV" begin

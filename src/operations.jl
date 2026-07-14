@@ -276,11 +276,23 @@ end
 
 
 # Comparison
-# Fast same-type equality via storage (bits <-> elements is a bijection per
-# type). Cross-type comparisons deliberately fall back to Base, which compares
-# element values — so a BinaryHV never equals a BipolarHV just because the
-# underlying bits match.
+# Hypervectors of DIFFERENT types are never equal, even when their element
+# values coincide numerically (`true == 1` would otherwise make an all-true
+# BinaryHV equal an all-+1 BipolarHV, whose stored bits are the exact
+# opposite). Within one type, equality compares storage — a bijection to the
+# elements for every type — and TernaryHV{Int8} == TernaryHV{Int64} etc. still
+# compare by value via the family methods. Comparisons against plain
+# AbstractVectors keep Base's elementwise semantics, and hashing stays on the
+# AbstractArray element-based fallback so that `isequal(hv, v::Vector)` implies
+# equal hashes (a type-salted hash would break that contract).
+Base.:(==)(::AbstractHV, ::AbstractHV) = false
+Base.isequal(::AbstractHV, ::AbstractHV) = false
+Base.:(==)(u::HV, v::HV) where {HV <: AbstractHV} = u.v == v.v
 Base.isequal(u::HV, v::HV) where {HV <: AbstractHV} = isequal(u.v, v.v)
+for T in (:TernaryHV, :RealHV, :GradedHV, :GradedBipolarHV, :FHRR)
+    @eval Base.:(==)(u::$T, v::$T) = u.v == v.v
+    @eval Base.isequal(u::$T, v::$T) = isequal(u.v, v.v)
+end
 
 """
     Base.isapprox(u::AbstractHV, v::AbstractHV, atol=length(u)/100, ptol=0.01)
