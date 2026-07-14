@@ -15,8 +15,9 @@ function Base.summary(io::IO, hv::BinaryHV)
 end
 
 function Base.summary(io::IO, hv::BipolarHV)
-    npos = count(hv.v)
-    return print(io, length(hv), "-element ", typeof(hv), " with ", npos, " positives and ", length(hv) - npos, " negatives")
+    # stored bit true ↦ -1, so count(hv.v) counts the NEGATIVES
+    nneg = count(hv.v)
+    return print(io, length(hv), "-element ", typeof(hv), " with ", length(hv) - nneg, " positives and ", nneg, " negatives")
 end
 
 function Base.summary(io::IO, hv::TernaryHV)

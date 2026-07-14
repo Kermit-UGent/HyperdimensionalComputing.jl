@@ -45,7 +45,32 @@ using Logging: Logging
         @test similar(hdv) isa BipolarHV
         @test sum(hdv) == sum(vi for vi in hdv)
         @test BipolarHV(s) == BipolarHV(; seed = hash_s)
-        @test BipolarHV([-1, 0, 1]) == BipolarHV([false, false, true])
+        # sign-based construction; Bool vectors are raw stored bits (true ↦ -1)
+        @test collect(BipolarHV([-1, 1])) == [-1, 1]
+        @test collect(BipolarHV([-2.5, 0.1])) == [-1, 1]
+        @test BipolarHV([-1, 1]) == BipolarHV([true, false])
+        # zero has no bipolar state
+        @test_throws ArgumentError BipolarHV([1, 0, -1])
+        @test_throws "no zero state" BipolarHV([1.0, 0.0])
+    end
+
+    # These tests are deliberately NOT polarity-blind: XOR self-inversion,
+    # quasi-orthogonality and cosine similarity are all invariant under flipping
+    # the bit↦element mapping, which is how the polarity bug survived a green
+    # suite. Each assertion here pins the mapping itself.
+    @testset "BipolarHV polarity" begin
+        x = BipolarHV(; D = 100, seed = 7)
+
+        # bind is self-inverse AND the identity is the all-+1 vector
+        @test all(collect(x * x) .== 1)
+
+        # construction and indexing agree: values round-trip through the sign constructor
+        @test BipolarHV(collect(x)) == x
+
+        # the summary header counts actual element values
+        s = summary(x)
+        @test occursin("$(count(==(1), collect(x))) positives", s)
+        @test occursin("$(count(==(-1), collect(x))) negatives", s)
     end
 
     @testset "BinaryHV" begin

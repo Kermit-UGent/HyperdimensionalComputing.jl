@@ -126,20 +126,23 @@ end
 """
     BipolarHV(; D = 10_000, seed = nothing, rng = default_rng())
     BipolarHV(this; D = 10_000)
+    BipolarHV(v::AbstractVector{<:Real})
     BipolarHV(v::AbstractVector{Bool})
-    BipolarHV(v::AbstractVector{<:Integer})
 
 A bipolar hypervector in the style of the Multiply-Add-Permute (MAP) vector symbolic
-architecture (Gayler, 1998). Elements are `±1`, stored
-compactly as a `BitVector`; indexing returns `±1`. Constructing from an integer
-vector maps positive entries to `+1` and the rest to `-1`.
+architecture (Gayler, 1998). Elements are `±1`, stored compactly as a `BitVector`
+with bit `true ↦ -1` and `false ↦ +1`, so that XOR on the stored bits is exactly
+the elementwise `±1` product.
 
-Under this architecture, `bind` is elementwise XOR of the stored bits and
-self-inverse (binding by the same hypervector twice undoes it; note that in the
-`±1` representation this is the *negated* elementwise product), `bundle` is a
+Constructing from a real vector takes the **sign** of each element; a zero element
+throws an `ArgumentError`, since a bipolar hypervector has no zero state — use
+[`TernaryHV`](@ref) for elements in `{-1, 0, +1}`. A `Bool` vector is the exception:
+it is interpreted as the **raw stored bits** (`true ↦ -1`), not as values.
+
+Under this architecture, `bind` is the elementwise product (XOR on the stored
+bits) and self-inverse — `x * x` is the all-`+1` identity — `bundle` is a
 majority vote across inputs with deterministic tie-breaking, and `similarity`
-defaults to cosine. Use [`TernaryHV`](@ref) for a (slightly less efficient)
-hypervector type that can contain zeros.
+defaults to cosine.
 
 The positional argument `this` is always the **object to encode** — it is hashed to
 seed the vector — and is *never* a dimension. Set dimensionality with the keyword
@@ -153,15 +156,15 @@ returns a plain `Vector`, not a hypervector.
 
 ```jldoctest
 julia> BipolarHV(; D = 8, rng = Xoshiro(42))
-8-element BipolarHV with 3 positives and 5 negatives:
- -1
- -1
- -1
- -1
+8-element BipolarHV with 5 positives and 3 negatives:
+  1
   1
   1
   1
  -1
+ -1
+ -1
+  1
 
 julia> BipolarHV("apple") == BipolarHV("apple")   # deterministic from hash
 true
@@ -210,7 +213,20 @@ function BipolarHV(
     return BipolarHV(bitrand(rng_instance, D))
 end
 
-BipolarHV(v::AbstractVector{<:Integer}) = BipolarHV(v .> 0)
+# Data constructor: the sign of each element decides the polarity. Zero has no
+# bipolar state, so it throws rather than letting a comparison operator decide
+# silently (that arbitrariness is what caused the polarity bug). Note that Bool
+# vectors do NOT take this path: they hit the inner constructor and are treated
+# as the raw stored bits.
+function BipolarHV(v::AbstractVector{<:Real})
+    any(iszero, v) && throw(
+        ArgumentError(
+            "bipolar hypervectors have no zero state; a zero element cannot be " *
+                "mapped to ±1. Use `TernaryHV` for hypervectors with elements in {-1, 0, +1}."
+        )
+    )
+    return BipolarHV(v .< 0)
+end
 
 # Helpers
 Base.getindex(hv::BipolarHV, i::Integer) = hv.v[i] ? -1 : 1
