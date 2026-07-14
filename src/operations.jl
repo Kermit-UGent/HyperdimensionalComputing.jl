@@ -276,7 +276,11 @@ end
 
 
 # Comparison
-Base.isequal(v::AbstractHV, u::AbstractHV) = v.v == u.v
+# Fast same-type equality via storage (bits <-> elements is a bijection per
+# type). Cross-type comparisons deliberately fall back to Base, which compares
+# element values — so a BinaryHV never equals a BipolarHV just because the
+# underlying bits match.
+Base.isequal(u::HV, v::HV) where {HV <: AbstractHV} = isequal(u.v, v.v)
 
 """
     Base.isapprox(u::AbstractHV, v::AbstractHV, atol=length(u)/100, ptol=0.01)

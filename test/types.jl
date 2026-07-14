@@ -34,6 +34,22 @@ using Logging: Logging
         @test isapprox(similarity(BinaryHV(:cat), BinaryHV(:dog)), 1 / 3; atol = 0.05)
     end
 
+    # regression (TODO §1.8): hypervectors of different types used to compare
+    # `isequal` whenever their stored bits matched
+    @testset "equality and hashing" begin
+        x = BinaryHV(; D = 50, seed = 1)
+        @test x == BinaryHV(x.v)
+        @test isequal(x, BinaryHV(x.v))
+        @test hash(x) == hash(BinaryHV(x.v))
+
+        # same stored bits, different type: not equal
+        y = BipolarHV(; D = 50, seed = 1)   # same seed ⇒ identical stored bits
+        @test x.v == y.v                    # precondition for the regression
+        @test !isequal(x, y)
+        @test x != y
+        @test !isequal(y, x)
+    end
+
     @testset "BipolarHV" begin
         hdv = BipolarHV(; D = n)
 

@@ -97,7 +97,6 @@ Base.copy(hv::HV) where {HV<:AbstractHV} = HV(copy(hv.v))
 # hypervector — a slice of a hypervector is not a meaningful hypervector.
 Base.getindex(hv::AbstractHV, i::Integer) = hv.v[i]
 Base.getindex(hv::AbstractHV, I::AbstractVector) = hv.v[I]
-Base.hash(hv::AbstractHV) = hash(hv.v)
 Base.similar(hv::HV) where {HV<:AbstractHV} = HV(; D=length(hv))
 Base.size(hv::AbstractHV) = size(hv.v)
 Base.sum(hv::AbstractHV) = sum(hv.v)
