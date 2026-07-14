@@ -129,6 +129,20 @@ Random.seed!(42)
         @test similarity(hv2, hv2) ≈ 1
 
         @test norm(hv1^3) ≈ sqrt(n)
+
+        # regression (TODO §1.3): perturbate used to throw a MethodError for FHRR;
+        # phases must be resampled so elements stay on the unit circle
+        hvp = perturbate(hv1, 10)
+        @test hvp isa FHRR
+        @test all(abs.(hvp.v) .≈ 1)
+        @test count(hvp.v .!= hv1.v) == 10   # exactly n positions resampled
+        @test perturbate(hv1, 0.2) isa FHRR
+        m = bitrand(length(hv1))
+        hvm = perturbate(hv1, m; rng = Xoshiro(1))
+        @test all(hvm.v[.!m] .== hv1.v[.!m])
+        @test all(abs.(hvm.v[m]) .≈ 1)
+        # `level` for FHRR uses its own ^-based method, not perturbation
+        @test level(FHRR(; D = 100), 5) isa Vector{<:FHRR}
     end
 
 end

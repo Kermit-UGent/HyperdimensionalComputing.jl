@@ -355,6 +355,19 @@ function perturbate!(::Type{HVByteVec}, hv::HV, p::Number, args...; rng::Abstrac
     return perturbate!(hv, randbv(length(hv), p; rng = rng), args...; rng = rng)
 end
 
+# FHRR elements live on the complex unit circle, so perturbation resamples the
+# phase at the selected positions instead of drawing from `eldist` (which would
+# produce invalid, non-unit-modulus elements).
+function perturbate!(::Type{HVByteVec}, hv::FHRR{Complex{R}}, I::AbstractVector{<:Integer}; rng::AbstractRNG = Random.default_rng()) where {R}
+    hv.v[I] .= exp.(2π * im .* rand(rng, R, length(I)))
+    return hv
+end
+
+function perturbate!(::Type{HVByteVec}, hv::FHRR{Complex{R}}, M::BitVector; rng::AbstractRNG = Random.default_rng()) where {R}
+    hv.v[M] .= exp.(2π * im .* rand(rng, R, sum(M)))
+    return hv
+end
+
 function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG = Random.default_rng())
     n = length(hv)
     M = randbv(n, binargs; rng = rng)
