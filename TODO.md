@@ -154,10 +154,16 @@ by the new `unbind` testset (see §5).
   dispatches on `::TernaryHV` and now actually shows positives/zeros/negatives
   (visible in the regenerated TernaryHV doctest).
 
-### 1.8 Cross-type equality is wrong — FIXED (2026-07-14)
-`isequal` is now a same-type storage fast path; cross-type comparisons fall back
-to Base's elementwise semantics (`==` was already correct). The one-arg `hash`
-override was removed so hashing is element-based and consistent with equality.
+### 1.8 Cross-type equality is wrong — FIXED (2026-07-14, strengthened later same day)
+First pass: same-type storage fast path for `isequal`, one-arg `hash` removed
+(hashing element-based via the AbstractArray fallback). Strengthened after the
+polarity flip made the remaining hole real: Base's numeric fallback let an
+all-true BinaryHV equal an all-+1 BipolarHV (`true == 1`) even though their
+stored bits are opposite. `==`/`isequal` between DIFFERENT hypervector types are
+now strictly `false`; same-family cross-parameter (TernaryHV{Int8} vs {Int64})
+compares by value; comparisons against plain vectors stay elementwise, which is
+also why hashing must remain the unsalted element-based fallback
+(`isequal(hv, ::Vector)` can be true and must imply equal hashes).
 Locked by an equality/hashing testset (same bits, different type ⇒ not equal).
 Original notes:
 `Base.isequal(v::AbstractHV, u::AbstractHV) = v.v == u.v` (`src/operations.jl:225`)
