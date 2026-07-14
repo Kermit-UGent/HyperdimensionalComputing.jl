@@ -7,7 +7,6 @@ version = "0.1.0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [weakdeps]
 UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
@@ -19,13 +18,13 @@ UnicodePlotting = "UnicodePlots"
 Distributions = "0.25.120"
 LinearAlgebra = "1.11.0"
 Random = "1.11.0"
-StatsBase = "0.34.6"
 UnicodePlots = "3.8.1"
 julia = "1.11"
 
 [extras]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
 
 [targets]
-test = ["Logging", "Test"]
+test = ["Logging", "Test", "UnicodePlots"]
