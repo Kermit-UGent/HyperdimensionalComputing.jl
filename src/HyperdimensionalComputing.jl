@@ -48,6 +48,14 @@ export multiset,
     decodelevel,
     convertlevel
 
+include("encode.jl")
+export encode,
+    AbstractEncoding,
+    KMer,
+    NGram,
+    Sequence,
+    BagOfSymbols
+
 include("inference.jl")
 export similarity,
     δ,

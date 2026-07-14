@@ -56,9 +56,9 @@ y = BipolarHV(; D = 64)                           # dimensionality is set with t
 z = TernaryHV([1, 1, -1, 0, 0, 0, 1, 1, -1, 0])   # wrap an existing vector
 ```
 
-The positional argument is reserved for *the object you want to encode*: `HV(this)` returns
-the deterministic hypervector representing `this`, seeded by `hash(this)`. Any token — a
-symbol, string, character, number — gets its own reproducible, quasi-orthogonal hypervector:
+`encode(HV, x)` turns any object into a deterministic hypervector (seeded by `hash(x)`), and
+`HV(x)` is shorthand for it. Any token — a symbol, string, or character — gets its own
+reproducible, quasi-orthogonal hypervector:
 
 ```julia
 julia> cat = BipolarHV(:cat)
@@ -78,8 +78,17 @@ julia> similarity(cat, BipolarHV(:dog))  # different objects are quasi-orthogona
 ```
 
 > [!IMPORTANT]
-> The positional argument is never a dimension: `BinaryHV(6)` is the 10,000-dimensional
-> hypervector *encoding the number 6*. Use `BinaryHV(; D = 6)` to set the dimensionality.
+> A number is never a dimension — and never a constructor token: `BinaryHV(6)` throws,
+> because it is ambiguous. Use `BinaryHV(; D = 6)` for a 6-dimensional random hypervector,
+> or `encode(BinaryHV, 6)` to encode the number 6 as a token.
+
+Sequences are encoded through `encode` with a strategy — thin compositions of the
+combinators below:
+
+```julia
+dna = encode(BinaryHV, "ACGTGGCTA", KMer(3))      # k-mer profile: substrings as atomic tokens
+txt = encode(BinaryHV, "hello world", NGram(3))   # symbol-level n-grams via shift-binding
+```
 
 ### Operations
 

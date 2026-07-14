@@ -72,7 +72,7 @@
     end
 
     @testset "Similarity matrix" begin
-        levels = level(RealHV(100), 10)
+        levels = level(RealHV(; D = 100), 10)
         M = similarity(levels)
         @test M isa Matrix
         @test size(M) == (10, 10)

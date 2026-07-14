@@ -7,6 +7,28 @@ Ordered by priority: fix §1–§2 before anything else, §3–§5 before the ta
 
 ---
 
+## 0. Architecture (2026-07-14): the `encode` interface
+
+The package now has an explicit layer taxonomy: **primitives** (`operations.jl`)
+→ **combinators** (`encoding.jl`, hypervectors in/out — unchanged) → **encoders**
+(`encode.jl`, raw data in, hypervector out). Key points:
+
+- `encode(HV, x)` is the canonical, deterministic token path; `HV(x)` is sugar.
+- Constructors have one meaning each: `HV(n::Number)` **throws** (the old
+  one-time `@warn` and its testset are gone), invalid data arrays throw instead
+  of silently token-encoding (this killed the `BinaryHV([1, 0])` trapdoor), and
+  data constructors validate each type's element domain.
+- Sequence strategies dispatch on `AbstractEncoding`: `KMer(k)` **resolves issue
+  #53** (windows as atomic hashed tokens — genuinely different from `NGram(n)`,
+  which shift-binds symbol encodings via `ngrams`); also `Sequence()` and
+  `BagOfSymbols()`. Extension point: one struct + one `encode` method.
+- [ ] Follow-up PR: stateful encoders as an `AbstractEncoder{HV}` hierarchy with
+  `encode`/`decode` — `RandomProjection` (fixed projection matrix) and
+  `LevelEncoder` (fixed level set; subsumes the §1.4b ladder problem). `encode`
+  deliberately keeps its first argument free for encoder instances.
+
+---
+
 ## 1. Confirmed bugs (release blockers)
 
 ### 1.1 UnicodePlots extension fails to precompile — FIXED (2026-07-14)

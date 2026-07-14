@@ -3,26 +3,31 @@ const s = :test
 const hash_s = hash(s)
 
 using Distributions
-using Logging: Logging
 
 @testset "types" begin
-    # The constructor convention shared by all hypervector types:
-    # `HV(this)` encodes an object deterministically via `hash(this)` — the
-    # positional argument is never a dimension; dimensionality is set with `D`.
-    @testset "constructor convention $HV" for HV in [
+    # `encode(HV, x)` is the canonical token path; `HV(x)` is shorthand for
+    # non-Number tokens, and Number arguments throw (irreducibly ambiguous
+    # with the dimensionality).
+    @testset "encode and constructor sugar $HV" for HV in [
             BinaryHV, BipolarHV, TernaryHV, RealHV,
             GradedHV, GradedBipolarHV, FHRR,
         ]
-        @test length(HV(42)) == 10_000  # 42 is a token, not a dimension
-        @test HV(42) == HV(42)          # deterministic per object
-        @test HV(:cat) == HV(:cat)
+        @test encode(HV, 42) == encode(HV, 42)      # deterministic per object
+        @test encode(HV, "cat") == encode(HV, "cat")
+        @test length(encode(HV, 42)) == 10_000
+        @test length(encode(HV, :cat; D = n)) == n
+        @test HV(:cat) == encode(HV, :cat)          # the sugar is genuinely sugar
+        @test HV("cat") == encode(HV, "cat")
         @test HV(:cat) != HV(:dog)
         @test length(HV(:cat; D = n)) == n
         @test length(HV(; D = n)) == n
 
-        # encoding an Integer warns that it is not a dimension; other tokens don't
-        @test_logs (:warn, r"never the dimensionality") match_mode = :any HV(42)
-        @test_logs min_level = Logging.Warn HV(:cat)
+        # Numbers throw, and the message teaches both alternatives
+        @test_throws ArgumentError HV(5)
+        @test_throws "D = 5" HV(5)
+        @test_throws "encode" HV(5)
+        @test_throws ArgumentError HV(2.5)
+        @test_throws ArgumentError HV(true)   # Bool is a Number
     end
 
     # Distinct objects give quasi-orthogonal hypervectors at the default D.
@@ -32,6 +37,56 @@ using Logging: Logging
         end
         # Jaccard similarity of random binary vectors has baseline ≈ 1/3
         @test isapprox(similarity(BinaryHV(:cat), BinaryHV(:dog)), 1 / 3; atol = 0.05)
+    end
+
+    # Data constructors: one meaning, validated per element domain.
+    @testset "data constructors and validation" begin
+        # the regression that motivated the encode interface: this used to
+        # silently token-encode into a 10,000-element hypervector
+        @test length(BinaryHV([1, 0])) == 2
+        @test collect(BinaryHV([1, 0])) == [true, false]
+        @test BinaryHV([1.0, 0.0]) == BinaryHV(Bool[1, 0])
+        @test_throws ArgumentError BinaryHV([1, 2])
+        @test_throws ArgumentError BinaryHV([0.5])
+
+        @test collect(BipolarHV([-1, 1])) == [-1, 1]
+        @test_throws ArgumentError BipolarHV([1, 0, -1])
+        @test_throws "TernaryHV" BipolarHV([1, 0, -1])   # zero points to TernaryHV
+        @test_throws ArgumentError BipolarHV([2.5, -1])  # no silent sign-taking
+
+        @test collect(TernaryHV([-1, 0, 1])) == [-1, 0, 1]
+        @test TernaryHV([-1.0, 0.0, 1.0]) == TernaryHV([-1, 0, 1])
+        @test_throws ArgumentError TernaryHV([2, 0])
+
+        @test RealHV([0.5, -3.7]) isa RealHV   # any real is fine
+
+        @test collect(GradedHV([0.0, 0.5, 1.0])) == [0.0, 0.5, 1.0]
+        @test_throws ArgumentError GradedHV([1.12])
+        @test_throws ArgumentError GradedHV([-0.2])
+
+        @test collect(GradedBipolarHV([-1.0, 0.5])) == [-1.0, 0.5]
+        @test_throws ArgumentError GradedBipolarHV([1.5])
+
+        @test FHRR([im, -1.0 + 0.0im]) isa FHRR
+        @test_throws ArgumentError FHRR([2.0 + 0.0im])   # not unit modulus
+
+        # tuples of reals read as data, like vectors (decided deliberately)
+        @test BipolarHV((1, -1)) == BipolarHV([1, -1])
+        @test length(BinaryHV((1, 0))) == 2
+
+        # arrays that are not valid element data throw instead of silently
+        # token-encoding; encode is the explicit escape hatch
+        @test_throws ArgumentError BinaryHV(["a", "b"])
+        @test encode(BinaryHV, ["a", "b"]) isa BinaryHV
+    end
+
+    # Construction and indexing agree for every type.
+    @testset "data round-trip $HV" for HV in [
+            BinaryHV, BipolarHV, TernaryHV, RealHV,
+            GradedHV, GradedBipolarHV, FHRR,
+        ]
+        x = HV(; D = 20, seed = 11)
+        @test HV(collect(x)) == x
     end
 
     # regression (TODO §1.8): hypervectors of different types used to compare
@@ -85,9 +140,8 @@ using Logging: Logging
         @test similar(hdv) isa BipolarHV
         @test sum(hdv) == sum(vi for vi in hdv)
         @test BipolarHV(s) == BipolarHV(; seed = hash_s)
-        # sign-based construction; Bool vectors are raw stored bits (true ↦ -1)
+        # strict ±1 data; Bool vectors are raw stored bits (true ↦ -1)
         @test collect(BipolarHV([-1, 1])) == [-1, 1]
-        @test collect(BipolarHV([-2.5, 0.1])) == [-1, 1]
         @test BipolarHV([-1, 1]) == BipolarHV([true, false])
         # zero has no bipolar state
         @test_throws ArgumentError BipolarHV([1, 0, -1])
@@ -161,9 +215,8 @@ using Logging: Logging
 
         @test GradedBipolarHV(; D = n, distr = 2Beta(10, 2) - 1) isa GradedBipolarHV
 
-        hv2 = GradedBipolarHV([0.1, 1.12, -0.2, -3.0])
-        normalize!(hv2)
-        @test all(-1 .≤ hv2 .≤ 1)
+        # out-of-range data is rejected, not clamped
+        @test_throws ArgumentError GradedBipolarHV([0.1, 1.12, -0.2, -3.0])
 
     end
 
@@ -182,9 +235,8 @@ using Logging: Logging
 
         @test GradedHV(; D = n, distr = Beta(10, 2)) isa GradedHV
 
-        hv2 = GradedHV([0.1, 1.12, -0.2, -3.0])
-        normalize!(hv2)
-        @test all(0 .≤ hv2 .≤ 1)
+        # out-of-range data is rejected, not clamped
+        @test_throws ArgumentError GradedHV([0.1, 1.12, -0.2, -3.0])
     end
 
     @testset "RealHV" begin

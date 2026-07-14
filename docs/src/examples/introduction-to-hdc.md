@@ -149,7 +149,7 @@ positions.
 $$m = \rho(h₁)$$
 
 ````@example introduction-to-hdc
-h₄ = TernaryHV(collect(0:9))
+h₄ = RealHV(collect(0.0:9.0))
 h₄.v
 ````
 

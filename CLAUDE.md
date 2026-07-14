@@ -15,7 +15,8 @@ src/
   HyperdimensionalComputing.jl  # Main module, exports
   types.jl                      # AbstractHV and 7 concrete vector types
   operations.jl                 # bundle, bind, unbind, shift, perturbate
-  encoding.jl                   # Composite encoding strategies (ngrams, hashtable, etc.)
+  encoding.jl                   # Combinators (ngrams, hashtable, ...): hypervectors in, hypervector out
+  encode.jl                     # Encoder layer: raw data in, hypervector out (encode + strategies)
   inference.jl                  # similarity, nearest_neighbor
   representations.jl            # Custom show/display methods
 ext/
@@ -33,18 +34,23 @@ docs/
 | Type | Elements | Algebra | Key trait |
 |------|----------|---------|-----------|
 | `BinaryHV` | {false, true} (`Bool`, displays as 0/1) | BSC (Binary Spatter Codes) | BitVector storage |
-| `BipolarHV` | {-1, +1} | MAP (Multiply-Add-Permute) | BitVector storage; bit `true ↦ -1`, `false ↦ +1`, so XOR on stored bits IS the ±1 product. Construction from reals is sign-based; **zero elements throw** (use `TernaryHV`); Bool vectors are raw bits |
+| `BipolarHV` | {-1, +1} | MAP (Multiply-Add-Permute) | BitVector storage; bit `true ↦ -1`, `false ↦ +1`, so XOR on stored bits IS the ±1 product. Data must be exactly ±1; **zero elements throw** (use `TernaryHV`); Bool vectors are raw bits |
 | `TernaryHV` | {-1, 0, +1} | MAP variant | Vector{Int} |
 | `RealHV` | ℝ | Continuous MAP | Configurable distribution |
 | `GradedHV` | [0, 1] | Fuzzy logic | Beta distribution default |
 | `GradedBipolarHV` | [-1, 1] | Fuzzy logic bipolar | Scaled Beta default |
 | `FHRR` | Complex unit circle | Fourier HRR | e^(iθ) elements, supports `^` |
 
-Default dimension is 10,000 for all types. Constructor convention (settled; documented on `AbstractHV`):
+Default dimension is 10,000 for all types. Layer taxonomy: **primitives** (operations.jl: bundle/bind/shift/perturbate) → **combinators** (encoding.jl: multiset, ngrams, ... — hypervectors in, hypervector out) → **encoders** (encode.jl: raw data in, hypervector out).
+
+Constructor convention (settled; each form has exactly one meaning, documented on `AbstractHV`):
 
 - `HV(; D = 10_000, seed = nothing, rng = Random.default_rng())` — random; `rng` takes an `AbstractRNG` **instance**, `seed` builds a fresh `Xoshiro(seed)`
-- `HV(this; D = 10_000)` — deterministic token encoding via `Xoshiro(hash(this))`; the positional argument is **never** a dimension (an `Integer` triggers a one-time warning)
-- `HV(v::AbstractVector)` — wrap existing data
+- `HV(v::AbstractVector{<:Real})` — wrap element data, **validated** against the type's domain (BinaryHV {0,1}; BipolarHV ±1, zero errors pointing to TernaryHV; TernaryHV {-1,0,+1}; Graded types range-checked; FHRR unit modulus). Invalid arrays throw — they never silently token-encode
+- `HV(x)` — token shorthand for `encode(HV, x)`; `HV(n::Number)` **throws an ArgumentError** naming both alternatives (`D = n` / `encode(HV, n)`) — this replaced the old one-time `@warn`
+- Tuples of reals read as data, like vectors
+
+`encode` is the canonical interface: `encode(HV, x; D)` is the deterministic token path (hash → seed), `encode(HV, x, strategy)` dispatches on `AbstractEncoding` strategies: `KMer(k)` (windows as atomic hashed tokens — resolves issue #53), `NGram(n)` (symbol-level shift-binding via `ngrams`), `Sequence()` (bundlesequence), `BagOfSymbols()` (multiset). New strategies = one struct + one `encode` method. Planned follow-up: stateful `AbstractEncoder{HV}` structs (RandomProjection, LevelEncoder) with `encode`/`decode`.
 
 Scalar `getindex` returns the element type `T`; non-scalar indexing returns a plain `Vector` of values, never a hypervector. Hypervectors are immutable (no `setindex!`).
 

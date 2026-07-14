@@ -123,7 +123,8 @@ function bundle(
         r .+= hv.v
     end
     normalize && clamp!(r, -1, 1)
-    return TernaryHV(r)
+    # inner constructor: bundling may exceed the ternary domain by design
+    return TernaryHV{eltype(r)}(r)
 end
 
 # realhv: just add + rescale with sqrt m
@@ -205,7 +206,7 @@ self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplicati
 Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # default
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
-Base.bind(hv1::TernaryHV, hv2::TernaryHV) = TernaryHV(hv1.v .* hv2.v)
+Base.bind(hv1::TernaryHV, hv2::TernaryHV) = (v = hv1.v .* hv2.v; TernaryHV{eltype(v)}(v))  # inner: operands may hold accumulated counts
 Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v, hv1.distr)
 Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v), hv1.distr)
 Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v), hv1.distr)

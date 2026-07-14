@@ -23,10 +23,10 @@ Random.seed!(42)
             @testset "bundle $HV" begin
                 @test bundle((hv1, hv2)) isa HV
                 @test bundle([hv1, hv2]) isa HV
-                @test bundle((HV(i; D = N) for i in 1:5)) isa HV
+                @test bundle((encode(HV, i; D = N) for i in 1:5)) isa HV
                 @test hv1 + hv2 isa HV
-                @test +((HV(i; D = N) for i in 1:5)...) isa HV
-                @test +((HV(i; D = N) for i in 1:5)...) == bundle((HV(i; D = N) for i in 1:5))
+                @test +((encode(HV, i; D = N) for i in 1:5)...) isa HV
+                @test +((encode(HV, i; D = N) for i in 1:5)...) == bundle((encode(HV, i; D = N) for i in 1:5))
 
                 if HV <: Union{BinaryHV, BipolarHV}
                     @test (hv1 + hv2).v == (hv1 + hv2).v
@@ -41,9 +41,9 @@ Random.seed!(42)
             @testset "bind $HV" begin
                 @test bind(hv1, hv2) isa HV
                 @test bind([hv1, hv2]) isa HV
-                @test bind([HV(i; D = N) for i in 1:5]) isa HV
-                @test *([HV(i; D = N) for i in 1:5]...) isa HV
-                @test bind([HV(i; D = N) for i in 1:5]) == *([HV(i; D = N) for i in 1:5]...) isa HV
+                @test bind([encode(HV, i; D = N) for i in 1:5]) isa HV
+                @test *([encode(HV, i; D = N) for i in 1:5]...) isa HV
+                @test bind([encode(HV, i; D = N) for i in 1:5]) == *([encode(HV, i; D = N) for i in 1:5]...) isa HV
                 @test hv1 * hv2 isa HV
             end
 

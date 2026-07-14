@@ -34,26 +34,20 @@ rather than located in individual elements. Hypervectors are composed with
 [`bundle`](@ref) (`+`), [`bind`](@ref) (`*`) and `shift` (`ρ`), and compared with
 [`similarity`](@ref).
 
-# Constructor convention
+# Constructors and `encode`
 
-All concrete hypervector types `HV <: AbstractHV` share the same constructor interface:
+All concrete hypervector types `HV <: AbstractHV` share the same constructor
+interface, and each constructor form has exactly one meaning:
 
-    HV(; D = 10_000, seed = nothing, rng = default_rng())
-    HV(this; D = 10_000)
-    HV(v::AbstractVector)
+    HV(; D = 10_000, seed = nothing, rng = default_rng())   # fresh random hypervector
+    HV(v::AbstractVector{<:Real})                           # wrap element data, validated per type
+    HV(x)                                                   # token shorthand for `encode(HV, x)`
 
-- `HV()` creates a fresh random hypervector. The dimensionality is set with the
-  keyword `D` (default 10,000); pass an integer `seed` for reproducibility.
-- `HV(this)` creates the *deterministic* hypervector encoding the object `this`,
-  seeded by `hash(this)`. Any token — a `Symbol`, `String`, `Char`, number, etc. —
-  gets its own reproducible, quasi-orthogonal hypervector.
-- `HV(v::AbstractVector)` wraps existing data in a hypervector.
-
-!!! warning
-    The positional argument is **always the object to encode, never a dimension**.
-    `BinaryHV(6)` is the 10,000-dimensional hypervector encoding the number `6`;
-    to set the dimensionality, use the keyword: `BinaryHV(; D = 6)`. To guard
-    against this mix-up, encoding an `Integer` emits a one-time warning per session.
+[`encode`](@ref) is the canonical way to turn raw data into hypervectors — `HV(x)`
+is shorthand for its token path only. `HV(n::Number)` throws, because a number is
+ambiguous between a token and the dimensionality (use `D = n`, or `encode(HV, n)`
+for number tokens); an array that is not valid element data for the type throws
+instead of silently token-encoding. Tuples of reals read as data, like vectors.
 
 Some types extend this interface with type-specific keywords, e.g. `distr` for
 [`RealHV`](@ref), [`GradedHV`](@ref) and [`GradedBipolarHV`](@ref).
@@ -83,7 +77,7 @@ julia> length(BinaryHV(:cat; D = 100))    # dimensionality is set with the keywo
 
 # See also
 
-[`bundle`](@ref), [`bind`](@ref), [`similarity`](@ref)
+[`encode`](@ref), [`bundle`](@ref), [`bind`](@ref), [`similarity`](@ref)
 
 # Extended help
 
@@ -110,23 +104,36 @@ normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 eldist(hv::AbstractHV) = eldist(typeof(hv))
 empty_vector(hv::AbstractHV) = zero(hv.v)
 
-# The positional constructor argument is the object to encode, never a dimension.
-# Integers are the common mix-up (`BinaryHV(6)` is not 6-dimensional), so the token
-# constructors emit a one-time warning for them; Bools are exempt.
-warn_integer_token(HV::Type, this) = nothing
-warn_integer_token(HV::Type, this::Bool) = nothing
-function warn_integer_token(HV::Type, this::Integer)
-    @warn "`$HV($this)` encodes the *object* `$this` as a hypervector — the positional " *
-        "argument is never the dimensionality. Use `$HV(; D = $this)` to set the number " *
-        "of dimensions instead. (This warning is only shown once per session.)" maxlog = 1 _id = :hv_integer_token
-    return nothing
+# Constructor sugar and guardrails. `HV(x)` is shorthand for `encode(HV, x)` —
+# the token path. A `Number` is irreducibly ambiguous with the dimensionality
+# and throws. An array that reaches the generic method is not valid element
+# data for the type and throws rather than silently token-encoding
+# (constructing from an array always means data; use `encode` for array
+# tokens). A tuple of reals reads as data, like a vector.
+(HV::Type{<:AbstractHV})(x; kwargs...) = encode(HV, x; kwargs...)
+(HV::Type{<:AbstractHV})(t::Tuple{Vararg{Real}}; kwargs...) = HV(collect(t); kwargs...)
+function (HV::Type{<:AbstractHV})(n::Number; kwargs...)
+    throw(
+        ArgumentError(
+            "`$HV($n)` is ambiguous. For a $n-dimensional random hypervector, use " *
+                "`$HV(; D = $n)`. To encode the number $n as a token, use `encode($HV, $n)`."
+        )
+    )
+end
+function (HV::Type{<:AbstractHV})(v::AbstractArray; kwargs...)
+    throw(
+        ArgumentError(
+            "`$HV` cannot be constructed from a $(typeof(v)): it is not valid element " *
+                "data for this type. Use `encode($HV, x)` to token-encode arbitrary objects."
+        )
+    )
 end
 
 
 # ------------------------------------------------------------------------------------ BipolarHV
 """
     BipolarHV(; D = 10_000, seed = nothing, rng = default_rng())
-    BipolarHV(this; D = 10_000)
+    BipolarHV(x)
     BipolarHV(v::AbstractVector{<:Real})
     BipolarHV(v::AbstractVector{Bool})
 
@@ -135,20 +142,20 @@ architecture (Gayler, 1998). Elements are `±1`, stored compactly as a `BitVecto
 with bit `true ↦ -1` and `false ↦ +1`, so that XOR on the stored bits is exactly
 the elementwise `±1` product.
 
-Constructing from a real vector takes the **sign** of each element; a zero element
-throws an `ArgumentError`, since a bipolar hypervector has no zero state — use
-[`TernaryHV`](@ref) for elements in `{-1, 0, +1}`. A `Bool` vector is the exception:
-it is interpreted as the **raw stored bits** (`true ↦ -1`), not as values.
+Constructing from a real vector requires every element to be exactly `±1`; a zero
+element throws an `ArgumentError`, since a bipolar hypervector has no zero state —
+use [`TernaryHV`](@ref) for elements in `{-1, 0, +1}` — and anything else is
+rejected rather than coerced. A `Bool` vector is the exception: it is interpreted
+as the **raw stored bits** (`true ↦ -1`), not as values.
 
 Under this architecture, `bind` is the elementwise product (XOR on the stored
 bits) and self-inverse — `x * x` is the all-`+1` identity — `bundle` is a
 majority vote across inputs with deterministic tie-breaking, and `similarity`
 defaults to cosine.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -205,26 +212,20 @@ function BipolarHV(;
     return BipolarHV(bitrand(rng_instance, D))
 end
 
-function BipolarHV(
-        this::Any;
-        D::Integer = 10_000
-    )
-    warn_integer_token(BipolarHV, this)
-    rng_instance = Xoshiro(hash(this))
-    return BipolarHV(bitrand(rng_instance, D))
-end
-
-# Data constructor: the sign of each element decides the polarity. Zero has no
-# bipolar state, so it throws rather than letting a comparison operator decide
-# silently (that arbitrariness is what caused the polarity bug). Note that Bool
-# vectors do NOT take this path: they hit the inner constructor and are treated
-# as the raw stored bits.
+# Data constructor: elements must be exactly ±1. Zero has no bipolar state and
+# points to TernaryHV; anything else is rejected rather than coerced (silent
+# sign-taking is how the polarity bug family started). Note that Bool vectors
+# do NOT take this path: they hit the inner constructor and are treated as the
+# raw stored bits.
 function BipolarHV(v::AbstractVector{<:Real})
     any(iszero, v) && throw(
         ArgumentError(
             "bipolar hypervectors have no zero state; a zero element cannot be " *
                 "mapped to ±1. Use `TernaryHV` for hypervectors with elements in {-1, 0, +1}."
         )
+    )
+    all(x -> x == 1 || x == -1, v) || throw(
+        ArgumentError("BipolarHV elements must be -1 or +1")
     )
     return BipolarHV(v .< 0)
 end
@@ -241,8 +242,8 @@ eldist(::Type{BipolarHV}) = 2Bernoulli(0.5) - 1
 # ------------------------------------------------------------------------------------ TernaryHV
 """
     TernaryHV(; D = 10_000, seed = nothing, rng = default_rng())
-    TernaryHV(this; D = 10_000)
-    TernaryHV(v::AbstractVector{<:Integer})
+    TernaryHV(x)
+    TernaryHV(v::AbstractVector{<:Real})
     TernaryHV{T}(...)
 
 A ternary hypervector implementing the Multiply-Add-Permute (MAP) vector symbolic
@@ -256,10 +257,9 @@ elementwise addition *without* normalization by default (so counts accumulate;
 `normalize` clamps the result back to `{-1, 0, +1}`), and `similarity` defaults to
 cosine.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -329,8 +329,17 @@ struct TernaryHV{T <: Integer} <: AbstractHV{T}
     TernaryHV{T}(v::AbstractVector{<:Integer}) where {T <: Integer} = new{T}(convert(Vector{T}, v))
 end
 
-# Outer constructor that infers type from input
-TernaryHV(v::AbstractVector{T}) where {T <: Integer} = TernaryHV{T}(v)
+# Data constructors validate the ternary domain. The inner `TernaryHV{T}`
+# constructors stay permissive on purpose: operations legitimately exceed the
+# domain (unnormalized bundling accumulates counts).
+function TernaryHV(v::AbstractVector{T}) where {T <: Integer}
+    all(x -> -1 ≤ x ≤ 1, v) || throw(ArgumentError("TernaryHV elements must be -1, 0, or +1"))
+    return TernaryHV{T}(v)
+end
+function TernaryHV(v::AbstractVector{<:Real})
+    all(x -> x == -1 || x == 0 || x == 1, v) || throw(ArgumentError("TernaryHV elements must be -1, 0, or +1"))
+    return TernaryHV{Int}(convert(Vector{Int}, v))
+end
 
 function TernaryHV(;
         D::Integer = 10_000,
@@ -338,15 +347,6 @@ function TernaryHV(;
         rng::AbstractRNG = Random.default_rng()
     )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
-    return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
-end
-
-function TernaryHV(
-        this::Any;
-        D::Integer = 10_000
-    )
-    warn_integer_token(TernaryHV, this)
-    rng_instance = Xoshiro(hash(this))
     return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
@@ -359,15 +359,6 @@ function TernaryHV{T}(;
     return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
 end
 
-function TernaryHV{T}(
-        this::Any;
-        D::Integer = 10_000
-    ) where {T <: Integer}
-    warn_integer_token(TernaryHV{T}, this)
-    rng_instance = Xoshiro(hash(this))
-    return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
-end
-
 # Helpers
 Base.copy(hv::TernaryHV{T}) where {T} = TernaryHV{T}(copy(hv.v))
 Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D = length(hv))
@@ -377,8 +368,8 @@ eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
 # ------------------------------------------------------------------------------------ BinaryHV
 """
     BinaryHV(; D = 10_000, seed = nothing, rng = default_rng())
-    BinaryHV(this; D = 10_000)
-    BinaryHV(v::AbstractVector{Bool})
+    BinaryHV(x)
+    BinaryHV(v::AbstractVector{<:Real})
 
 A binary hypervector implementing the Binary Spatter Code (BSC) vector symbolic
 architecture (Kanerva, 1994–1997). Elements are `{false,true}`,
@@ -388,10 +379,9 @@ Under BSC, `bind` is elementwise XOR and self-inverse (`x * x` is the identity
 element), `bundle` is a majority vote across inputs with
 deterministic tie-breaking, and `similarity` defaults to Jaccard.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -451,13 +441,11 @@ function BinaryHV(;
     return BinaryHV(bitrand(rng_instance, D))
 end
 
-function BinaryHV(
-        this::Any;
-        D::Integer = 10_000
-    )
-    warn_integer_token(BinaryHV, this)
-    rng_instance = Xoshiro(hash(this))
-    return BinaryHV(bitrand(rng_instance, D))
+# Data constructor: elements must be Boolean-valued (0/1); Bool vectors hit
+# the inner constructor directly.
+function BinaryHV(v::AbstractVector{<:Real})
+    all(x -> iszero(x) || isone(x), v) || throw(ArgumentError("BinaryHV elements must be 0 or 1"))
+    return BinaryHV(BitVector(v .== 1))
 end
 
 # Helpers
@@ -468,7 +456,7 @@ eldist(::Type{BinaryHV}) = Bernoulli(0.5)
 # --------------------------------------------------------------------------------------- RealHV
 """
     RealHV(; D = 10_000, distr = Normal(), seed = nothing, rng = default_rng())
-    RealHV(this; D = 10_000, distr = Normal())
+    RealHV(x)
     RealHV(v::AbstractVector{<:Real}[, distr])
 
 A real-valued hypervector (continuous Multiply-Add-Permute architecture). Elements
@@ -483,10 +471,9 @@ to cosine. Real-valued MAP binding is not exactly invertible, so [`unbind`](@ref
 against candidate hypervectors, or use [`FHRR`](@ref) or [`BipolarHV`](@ref) if
 you need exact unbinding.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -549,16 +536,6 @@ function RealHV(;
     return RealHV(rand(rng_instance, distr, D), distr)
 end
 
-function RealHV(
-        this::Any;
-        D::Integer = 10_000,
-        distr::Distribution = eldist(RealHV)
-    )
-    warn_integer_token(RealHV, this)
-    rng_instance = Xoshiro(hash(this))
-    return RealHV(rand(rng_instance, distr, D), distr)
-end
-
 # Helpers
 Base.copy(hv::RealHV) = RealHV(copy(hv.v), hv.distr)
 Base.similar(hv::RealHV) = RealHV(; D = length(hv), distr = hv.distr)
@@ -572,7 +549,7 @@ eldist(::Type{<:RealHV}) = Normal()
 # -------------------------------------------------------------------------------------- GradedHV
 """
     GradedHV(; D = 10_000, distr = Beta(1, 1), seed = nothing, rng = default_rng())
-    GradedHV(this; D = 10_000, distr = Beta(1, 1))
+    GradedHV(x)
     GradedHV(v::AbstractVector{<:Real}[, distr])
 
 A graded hypervector with elements in the fuzzy-membership interval `[0, 1]`.
@@ -584,10 +561,9 @@ Operations follow fuzzy logic: `bind` is the fuzzy XOR
 `(1 - x) * y + x * (1 - y)`, `bundle` uses the three-valued π aggregation, and
 `similarity` defaults to Jaccard.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -628,10 +604,13 @@ struct GradedHV{T <: Real} <: AbstractHV{T}
     v::Vector{T}
     distr::Distribution
 
-    GradedHV(
-        v::AbstractVector{T},
-        distr::Distribution = eldist(GradedHV)
-    ) where {T <: Real} = new{T}(clamp.(v, 0, 1), distr)
+    function GradedHV(
+            v::AbstractVector{T},
+            distr::Distribution = eldist(GradedHV)
+        ) where {T <: Real}
+        all(x -> 0 ≤ x ≤ 1, v) || throw(ArgumentError("GradedHV elements must lie in [0, 1]"))
+        return new{T}(v, distr)
+    end
 end
 
 # Constructors
@@ -643,17 +622,6 @@ function GradedHV(;
     )
     @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
-    return GradedHV(rand(rng_instance, distr, D), distr)
-end
-
-function GradedHV(
-        this::Any;
-        D::Integer = 10_000,
-        distr::Distribution = eldist(GradedHV)
-    )
-    @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
-    warn_integer_token(GradedHV, this)
-    rng_instance = Xoshiro(hash(this))
     return GradedHV(rand(rng_instance, distr, D), distr)
 end
 
@@ -669,7 +637,7 @@ empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 # -------------------------------------------------------------------------------- GradedBipolarHV
 """
     GradedBipolarHV(; D = 10_000, distr = 2Beta(1, 1) - 1, seed = nothing, rng = default_rng())
-    GradedBipolarHV(this; D = 10_000, distr = 2Beta(1, 1) - 1)
+    GradedBipolarHV(x)
     GradedBipolarHV(v::AbstractVector{<:Real}[, distr])
 
 A graded bipolar hypervector with elements in `[-1, 1]`, the bipolar counterpart of
@@ -682,10 +650,9 @@ bipolar interval: `bind` is fuzzy XOR and `bundle` the three-valued π aggregati
 both applied after rescaling `[-1, 1]` to `[0, 1]` and mapping back; `similarity`
 defaults to cosine.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -726,10 +693,13 @@ struct GradedBipolarHV{T <: Real} <: AbstractHV{T}
     v::Vector{T}
     distr::Distribution
 
-    GradedBipolarHV(
-        v::AbstractVector{T},
-        distr::Distribution = eldist(GradedBipolarHV)
-    ) where {T <: Real} = new{T}(clamp.(v, -1, 1), distr)
+    function GradedBipolarHV(
+            v::AbstractVector{T},
+            distr::Distribution = eldist(GradedBipolarHV)
+        ) where {T <: Real}
+        all(x -> -1 ≤ x ≤ 1, v) || throw(ArgumentError("GradedBipolarHV elements must lie in [-1, 1]"))
+        return new{T}(v, distr)
+    end
 end
 
 function GradedBipolarHV(;
@@ -740,17 +710,6 @@ function GradedBipolarHV(;
     )
     @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
-    return GradedBipolarHV(rand(rng_instance, distr, D), distr)
-end
-
-function GradedBipolarHV(
-        this::Any;
-        D::Integer = 10_000,
-        distr::Distribution = eldist(GradedBipolarHV)
-    )
-    @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
-    warn_integer_token(GradedBipolarHV, this)
-    rng_instance = Xoshiro(hash(this))
     return GradedBipolarHV(rand(rng_instance, distr, D), distr)
 end
 
@@ -765,7 +724,7 @@ eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
 """
     FHRR(; D = 10_000, T = Float64, seed = nothing, rng = default_rng())
-    FHRR(this; D = 10_000, T = Float64)
+    FHRR(x)
     FHRR(v::AbstractVector{<:Complex})
 
 A Fourier Holographic Reduced Representation hypervector (Plate, 1995). Elements are
@@ -778,10 +737,9 @@ unit modulus, and `similarity` is the normalized real part of the complex dot
 product. In addition, `hv ^ x` raises every phase to the power `x`, which enables
 fractional-power (level) encoding of continuous values.
 
-The positional argument `this` is always the **object to encode** — it is hashed to
-seed the vector — and is *never* a dimension. Set dimensionality with the keyword
-`D`. Encoding the same object twice yields the same hypervector. See
-[`AbstractHV`](@ref) for the full convention.
+`HV(x)` is shorthand for [`encode`](@ref)`(HV, x)`, the deterministic token path;
+a `Number` argument throws — use `D = n` for dimensionality, or `encode` for
+number tokens. See [`AbstractHV`](@ref) for the full convention.
 
 Indexing with a scalar returns a single element; indexing with a range or vector
 returns a plain `Vector`, not a hypervector.
@@ -821,7 +779,16 @@ true
 """
 struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
+
+    function FHRR{T}(v::Vector{T}) where {T <: Complex}
+        all(z -> abs(z) ≈ 1, v) || throw(
+            ArgumentError("FHRR elements must lie on the complex unit circle (unit modulus)")
+        )
+        return new{T}(v)
+    end
 end
+
+FHRR(v::AbstractVector{T}) where {T <: Complex} = FHRR{T}(convert(Vector{T}, v))
 
 function FHRR(;
         D::Integer = 10_000,
@@ -831,11 +798,6 @@ function FHRR(;
     )
     rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return FHRR(exp.(2π * im .* rand(rng_instance, T, D)))
-end
-
-function FHRR(this::Any; D::Integer = 10_000, T::Type = Float64)
-    warn_integer_token(FHRR, this)
-    return FHRR(; T = T, D = D, seed = hash(this))
 end
 
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))
