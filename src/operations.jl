@@ -252,7 +252,7 @@ Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 # --------
 
 # Shifting / Permutation
-shift!(hv::AbstractHV, k = 1) = circshift!(hv.v, k)
+shift!(hv::AbstractHV, k = 1) = (circshift!(hv.v, k); hv)
 
 function shift(hv::AbstractHV, k = 1)
     r = similar(hv)

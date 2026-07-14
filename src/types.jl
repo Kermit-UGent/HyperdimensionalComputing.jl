@@ -370,7 +370,7 @@ end
 # Helpers
 Base.copy(hv::TernaryHV{T}) where {T} = TernaryHV{T}(copy(hv.v))
 Base.similar(hv::TernaryHV{T}) where {T} = TernaryHV{T}(; D=length(hv))
-normalize!(hv::TernaryHV) = clamp!(hv.v, -1, 1)
+normalize!(hv::TernaryHV) = (clamp!(hv.v, -1, 1); hv)
 eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
 
 # ------------------------------------------------------------------------------------ BinaryHV
@@ -660,7 +660,7 @@ end
 Base.copy(hv::GradedHV) = GradedHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedHV) = GradedHV(; D=length(hv), distr=hv.distr)
 Base.zeros(hv::GradedHV) = fill!(similar(hv.v), one(eltype(hv.v)) / 2)
-normalize!(hv::GradedHV) = clamp!(hv.v, 0, 1)
+normalize!(hv::GradedHV) = (clamp!(hv.v, 0, 1); hv)
 eldist(::Type{<:GradedHV}) = Beta(1, 1)
 empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
@@ -756,7 +756,7 @@ end
 # Helpers
 Base.copy(hv::GradedBipolarHV) = GradedBipolarHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D=length(hv), distr=hv.distr)
-normalize!(hv::GradedBipolarHV) = clamp!(hv.v, -1, 1)
+normalize!(hv::GradedBipolarHV) = (clamp!(hv.v, -1, 1); hv)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 
 # Fourier Holographic Reduced Representations

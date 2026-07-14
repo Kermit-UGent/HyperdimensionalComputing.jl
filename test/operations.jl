@@ -111,6 +111,18 @@ Random.seed!(42)
         @test isapprox(std(collect(normalize!(x * y))), 5; rtol = 0.1)
     end
 
+    # regression (TODO §1.6): shift! and the clamp!-based normalize! methods
+    # used to return the raw wrapped vector instead of the hypervector
+    @testset "in-place operations return the hypervector" begin
+        for HV in [BinaryHV, BipolarHV, TernaryHV, RealHV, GradedHV, GradedBipolarHV, FHRR]
+            hv = HV(; D = 20)
+            @test shift!(hv, 3) === hv
+            @test ρ!(hv) === hv
+            @test normalize!(hv) === hv
+            @test perturbate!(hv, 2) === hv
+        end
+    end
+
     @testset "unbind" begin
         # XOR- and multiplication-based types: binding is self-inverse, roundtrip exact
         for HV in [BinaryHV, BipolarHV, TernaryHV]
