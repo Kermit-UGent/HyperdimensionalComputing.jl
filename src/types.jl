@@ -38,8 +38,8 @@ rather than located in individual elements. Hypervectors are composed with
 
 All concrete hypervector types `HV <: AbstractHV` share the same constructor interface:
 
-    HV(; D = 10_000, seed = nothing, rng = <<<DECIDE>>>)
-    HV(this; D = 10_000, rng = <<<DECIDE>>>)
+    HV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    HV(this; D = 10_000)
     HV(v::AbstractVector)
 
 - `HV()` creates a fresh random hypervector. The dimensionality is set with the
@@ -124,8 +124,8 @@ end
 
 # ------------------------------------------------------------------------------------ BipolarHV
 """
-    BipolarHV(; D = 10_000, seed = nothing, rng = <<<DECIDE>>>)
-    BipolarHV(this; D = 10_000, rng = <<<DECIDE>>>)
+    BipolarHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    BipolarHV(this; D = 10_000)
     BipolarHV(v::AbstractVector{Bool})
     BipolarHV(v::AbstractVector{<:Integer})
 
@@ -149,7 +149,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> BipolarHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> BipolarHV(; D = 8, rng = Xoshiro(42))
 8-element BipolarHV with 3 positives and 5 negatives:
  -1
  -1
@@ -167,7 +167,7 @@ true
 Random hypervectors are quasi-orthogonal at the default `D = 10_000`:
 
 ```jldoctest
-julia> x = BipolarHV(; seed = 1, rng = Xoshiro); y = BipolarHV(; seed = 2, rng = Xoshiro);
+julia> x = BipolarHV(; rng = Xoshiro(1)); y = BipolarHV(; rng = Xoshiro(2));
 
 julia> similarity(x, y)
 -0.0028
@@ -192,19 +192,18 @@ end
 function BipolarHV(;
     D::Integer=10_000,
     seed::Union{Integer,Nothing}=nothing,
-    rng=MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return BipolarHV(bitrand(rng_instance, D))
 end
 
 function BipolarHV(
     this::Any;
-    D::Integer=10_000,
-    rng=MersenneTwister
+    D::Integer=10_000
 )
     warn_integer_token(BipolarHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return BipolarHV(bitrand(rng_instance, D))
 end
 
@@ -221,8 +220,8 @@ eldist(::Type{BipolarHV}) = 2Bernoulli(0.5) - 1
 
 # ------------------------------------------------------------------------------------ TernaryHV
 """
-    TernaryHV(; D = 10_000, seed = nothing, rng = <<<DECIDE>>>)
-    TernaryHV(this; D = 10_000, rng = <<<DECIDE>>>)
+    TernaryHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    TernaryHV(this; D = 10_000)
     TernaryHV(v::AbstractVector{<:Integer})
     TernaryHV{T}(...)
 
@@ -245,7 +244,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> TernaryHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> TernaryHV(; D = 8, rng = Xoshiro(42))
 8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
   1
   1
@@ -263,7 +262,7 @@ true
 Bundling accumulates counts; `normalize` clamps back to `{-1, 0, +1}`:
 
 ```jldoctest
-julia> x = TernaryHV(; D = 8, seed = 1, rng = Xoshiro); y = TernaryHV(; D = 8, seed = 2, rng = Xoshiro);
+julia> x = TernaryHV(; D = 8, rng = Xoshiro(1)); y = TernaryHV(; D = 8, rng = Xoshiro(2));
 
 julia> x + y
 8-element TernaryHV{Int64} with 3 positives, 2 zeros, and 3 negatives:
@@ -313,38 +312,36 @@ TernaryHV(v::AbstractVector{T}) where {T<:Integer} = TernaryHV{T}(v)
 function TernaryHV(;
     D::Integer=10_000,
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
 function TernaryHV(
     this::Any;
-    D::Integer=10_000,
-    rng=Random.MersenneTwister
+    D::Integer=10_000
 )
     warn_integer_token(TernaryHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return TernaryHV{Int}(rand(rng_instance, (-1, 1), D))
 end
 
 function TernaryHV{T}(;
     D::Integer=10_000,
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 ) where {T<:Integer}
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
 end
 
 function TernaryHV{T}(
     this::Any;
-    D::Integer=10_000,
-    rng=Random.MersenneTwister
+    D::Integer=10_000
 ) where {T<:Integer}
     warn_integer_token(TernaryHV{T}, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return TernaryHV{T}(convert(Vector{T}, rand(rng_instance, (-1, 1), D)))
 end
 
@@ -356,12 +353,12 @@ eldist(::Type{<:TernaryHV}) = 2Bernoulli(0.5) - 1
 
 # ------------------------------------------------------------------------------------ BinaryHV
 """
-    BinaryHV(; D = 10_000, seed = nothing, rng = <<<DECIDE>>>)
-    BinaryHV(this; D = 10_000, rng = <<<DECIDE>>>)
+    BinaryHV(; D = 10_000, seed = nothing, rng = Random.default_rng())
+    BinaryHV(this; D = 10_000)
     BinaryHV(v::AbstractVector{Bool})
 
 A binary hypervector implementing the Binary Spatter Code (BSC) vector symbolic
-architecture (Kanerva, 1994–1997). Elements are `<<<DECIDE: {0,1} or {false,true}>>>`,
+architecture (Kanerva, 1994–1997). Elements are `{false,true}`,
 stored compactly as a `BitVector`.
 
 Under BSC, `bind` is elementwise XOR and self-inverse (binding by the same
@@ -376,7 +373,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> BinaryHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> BinaryHV(; D = 8, rng = Xoshiro(42))
 8-element BinaryHV with 3 true and 5 false:
  0
  0
@@ -394,7 +391,7 @@ true
 Binding is self-inverse:
 
 ```jldoctest
-julia> x = BinaryHV(; D = 8, seed = 1, rng = Xoshiro); y = BinaryHV(; D = 8, seed = 2, rng = Xoshiro);
+julia> x = BinaryHV(; D = 8, rng = Xoshiro(1)); y = BinaryHV(; D = 8, rng = Xoshiro(2));
 
 julia> x * y * y == x
 true
@@ -422,19 +419,18 @@ end
 function BinaryHV(;
     D::Integer=10_000,
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return BinaryHV(bitrand(rng_instance, D))
 end
 
 function BinaryHV(
     this::Any;
-    D::Integer=10_000,
-    rng=Random.MersenneTwister
+    D::Integer=10_000
 )
     warn_integer_token(BinaryHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return BinaryHV(bitrand(rng_instance, D))
 end
 
@@ -445,8 +441,8 @@ eldist(::Type{BinaryHV}) = Bernoulli(0.5)
 
 # --------------------------------------------------------------------------------------- RealHV
 """
-    RealHV(; D = 10_000, distr = Normal(), seed = nothing, rng = <<<DECIDE>>>)
-    RealHV(this; D = 10_000, distr = Normal(), rng = <<<DECIDE>>>)
+    RealHV(; D = 10_000, distr = Normal(), seed = nothing, rng = Random.default_rng())
+    RealHV(this; D = 10_000, distr = Normal())
     RealHV(v::AbstractVector{<:Real}[, distr])
 
 A real-valued hypervector (continuous Multiply-Add-Permute architecture). Elements
@@ -466,7 +462,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> RealHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> RealHV(; D = 8, rng = Xoshiro(42))
 8-element RealHV{Float64} with μ ± σ = -0.222 ± 0.736:
  -0.36335748145177754
   0.2517372155742292
@@ -484,7 +480,7 @@ true
 The `distr` keyword controls the element distribution:
 
 ```jldoctest
-julia> RealHV(; D = 8, distr = Normal(0, 5), seed = 1, rng = Xoshiro)
+julia> RealHV(; D = 8, distr = Normal(0, 5), rng = Xoshiro(1))
 8-element RealHV{Float64} with μ ± σ = 0.214 ± 4.17:
   0.30966370157040063
   1.392029070820001
@@ -515,20 +511,19 @@ function RealHV(;
     distr::Distribution=eldist(RealHV),
     D::Integer=10_000,
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return RealHV(rand(rng_instance, distr, D), distr)
 end
 
 function RealHV(
     this::Any;
     D::Integer=10_000,
-    distr::Distribution=eldist(RealHV),
-    rng=Random.MersenneTwister
+    distr::Distribution=eldist(RealHV)
 )
     warn_integer_token(RealHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return RealHV(rand(rng_instance, distr, D), distr)
 end
 
@@ -544,8 +539,8 @@ eldist(::Type{<:RealHV}) = Normal()
 
 # -------------------------------------------------------------------------------------- GradedHV
 """
-    GradedHV(; D = 10_000, distr = Beta(1, 1), seed = nothing, rng = <<<DECIDE>>>)
-    GradedHV(this; D = 10_000, distr = Beta(1, 1), rng = <<<DECIDE>>>)
+    GradedHV(; D = 10_000, distr = Beta(1, 1), seed = nothing, rng = Random.default_rng())
+    GradedHV(this; D = 10_000, distr = Beta(1, 1))
     GradedHV(v::AbstractVector{<:Real}[, distr])
 
 A graded hypervector with elements in the fuzzy-membership interval `[0, 1]`.
@@ -565,7 +560,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> GradedHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> GradedHV(; D = 8, rng = Xoshiro(42))
 8-element GradedHV{Float64} with μ ± σ = 0.532 ± 0.247:
  0.8023279156644033
  0.6042216741680727
@@ -609,22 +604,21 @@ function GradedHV(;
     D::Integer=10_000,
     distr::Distribution=eldist(GradedHV),
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
     @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return GradedHV(rand(rng_instance, distr, D), distr)
 end
 
 function GradedHV(
     this::Any;
     D::Integer=10_000,
-    distr::Distribution=eldist(GradedHV),
-    rng=Random.MersenneTwister
+    distr::Distribution=eldist(GradedHV)
 )
     @assert 0 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [0,1]"
     warn_integer_token(GradedHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return GradedHV(rand(rng_instance, distr, D), distr)
 end
 
@@ -639,8 +633,8 @@ empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
 # -------------------------------------------------------------------------------- GradedBipolarHV
 """
-    GradedBipolarHV(; D = 10_000, distr = 2Beta(1, 1) - 1, seed = nothing, rng = <<<DECIDE>>>)
-    GradedBipolarHV(this; D = 10_000, distr = 2Beta(1, 1) - 1, rng = <<<DECIDE>>>)
+    GradedBipolarHV(; D = 10_000, distr = 2Beta(1, 1) - 1, seed = nothing, rng = Random.default_rng())
+    GradedBipolarHV(this; D = 10_000, distr = 2Beta(1, 1) - 1)
     GradedBipolarHV(v::AbstractVector{<:Real}[, distr])
 
 A graded bipolar hypervector with elements in `[-1, 1]`, the bipolar counterpart of
@@ -661,7 +655,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> GradedBipolarHV(; D = 8, seed = 42, rng = Xoshiro)
+julia> GradedBipolarHV(; D = 8, rng = Xoshiro(42))
 8-element GradedBipolarHV{Float64} with μ ± σ = 0.064 ± 0.494:
   0.6046558313288066
   0.20844334833614542
@@ -704,22 +698,21 @@ function GradedBipolarHV(;
     D::Integer=10_000,
     distr::Distribution=eldist(GradedBipolarHV),
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
     @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return GradedBipolarHV(rand(rng_instance, distr, D), distr)
 end
 
 function GradedBipolarHV(
     this::Any;
     D::Integer=10_000,
-    distr::Distribution=eldist(GradedBipolarHV),
-    rng=Random.MersenneTwister
+    distr::Distribution=eldist(GradedBipolarHV)
 )
     @assert -1 ≤ minimum(distr) < maximum(distr) ≤ 1 "Provide `distr` with support in [-1,1]"
     warn_integer_token(GradedBipolarHV, this)
-    rng_instance = rng(hash(this))
+    rng_instance = Xoshiro(hash(this))
     return GradedBipolarHV(rand(rng_instance, distr, D), distr)
 end
 
@@ -733,8 +726,8 @@ eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
 # --------------------------------------------
 
 """
-    FHRR(; D = 10_000, T = Float64, seed = nothing, rng = <<<DECIDE>>>)
-    FHRR(this; D = 10_000, T = Float64, rng = <<<DECIDE>>>)
+    FHRR(; D = 10_000, T = Float64, seed = nothing, rng = Random.default_rng())
+    FHRR(this; D = 10_000, T = Float64)
     FHRR(v::AbstractVector{<:Complex})
 
 A Fourier Holographic Reduced Representation hypervector (Plate, 1995). Elements are
@@ -755,7 +748,7 @@ seed the vector — and is *never* a dimension. Set dimensionality with the keyw
 # Examples
 
 ```jldoctest
-julia> FHRR(; D = 4, seed = 42, rng = Xoshiro)
+julia> FHRR(; D = 4, rng = Xoshiro(42))
 4-element FHRR{ComplexF64} with μ ± σ = -0.73 - 0.309im ± 0.704:
  -0.6875407989187119 - 0.7261457497102214im
  -0.9517124499338168 + 0.3069908999318585im
@@ -769,7 +762,7 @@ true
 Fractional powers encode continuous values: nearby exponents stay similar.
 
 ```jldoctest
-julia> x = FHRR(; seed = 1, rng = Xoshiro);
+julia> x = FHRR(; rng = Xoshiro(1));
 
 julia> similarity(x^1.0, x^1.05) > similarity(x^1.0, x^2.0)
 true
@@ -793,15 +786,15 @@ function FHRR(;
     D::Integer=10_000,
     T::Type=Float64,
     seed::Union{Integer,Nothing}=nothing,
-    rng=Random.MersenneTwister
+    rng::AbstractRNG=Random.default_rng()
 )
-    rng_instance = isnothing(seed) ? rng() : rng(seed)
+    rng_instance = isnothing(seed) ? rng : Xoshiro(seed)
     return FHRR(exp.(2π * im .* rand(rng_instance, T, D)))
 end
 
-function FHRR(this::Any; D::Integer=10_000, T::Type=Float64, rng=Random.MersenneTwister)
+function FHRR(this::Any; D::Integer=10_000, T::Type=Float64)
     warn_integer_token(FHRR, this)
-    return FHRR(; T=T, D=D, seed=hash(this), rng=rng)
+    return FHRR(; T=T, D=D, seed=hash(this))
 end
 
 Base.similar(hv::FHRR{<:Complex{R}}) where {R} = FHRR(exp.(2π * im .* rand(R, length(hv))))

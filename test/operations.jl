@@ -32,8 +32,8 @@ Random.seed!(42)
                     @test bundle([hv1, hv2]).v == bundle([hv1, hv2]).v
                     hv3 = HV(; D = N)
                     @test bundle([hv1, hv2, hv3]).v == bundle([hv1, hv2, hv3]).v
-                    @test bundle([hv1, hv2]; rng = MersenneTwister(1)).v ==
-                        bundle([hv1, hv2]; rng = MersenneTwister(1)).v
+                    @test bundle([hv1, hv2]; rng = Xoshiro(1)).v ==
+                        bundle([hv1, hv2]; rng = Xoshiro(1)).v
                 end
             end
 
@@ -63,8 +63,8 @@ Random.seed!(42)
                 @test hv2.v[m] != hvp.v[m]
                 @test hv2.v[.!m] ≈ hvp.v[.!m]
 
-                @test perturbate(hv1, 0.1, rng = MersenneTwister(1)) == perturbate(hv1, 0.1, rng = MersenneTwister(1))
-                @test perturbate(hv1, 0.1, rng = MersenneTwister(1)) != perturbate(hv1, 0.1, rng = MersenneTwister(2))
+                @test perturbate(hv1, 0.1, rng = Xoshiro(1)) == perturbate(hv1, 0.1, rng = Xoshiro(1))
+                @test perturbate(hv1, 0.1, rng = Xoshiro(1)) != perturbate(hv1, 0.1, rng = Xoshiro(2))
             end
 
             # currently not yet a good way of evaluating these

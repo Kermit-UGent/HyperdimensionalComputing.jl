@@ -25,6 +25,15 @@ using Logging: Logging
         @test_logs min_level = Logging.Warn HV(:cat)
     end
 
+    # Distinct objects give quasi-orthogonal hypervectors at the default D.
+    @testset "quasi-orthogonality of tokens" begin
+        for HV in [BipolarHV, RealHV, FHRR]  # cosine-type similarity: ≈ 0
+            @test abs(similarity(HV(:cat), HV(:dog))) < 0.05
+        end
+        # Jaccard similarity of random binary vectors has baseline ≈ 1/3
+        @test isapprox(similarity(BinaryHV(:cat), BinaryHV(:dog)), 1 / 3; atol = 0.05)
+    end
+
     @testset "BipolarHV" begin
         hdv = BipolarHV(; D = n)
 

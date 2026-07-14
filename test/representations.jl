@@ -17,7 +17,7 @@ using Random: Xoshiro
     end
 
     @testset "elements and truncation" begin
-        hv = BipolarHV(; D = 19, seed = 1, rng = Xoshiro)
+        hv = BipolarHV(; D = 19, rng = Xoshiro(1))
 
         # untruncated: header plus one line per element, printed by Base
         s = plain(hv)
