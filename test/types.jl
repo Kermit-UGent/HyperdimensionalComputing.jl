@@ -3,8 +3,28 @@ const s = :test
 const hash_s = hash(s)
 
 using Distributions
+using Logging: Logging
 
 @testset "types" begin
+    # The constructor convention shared by all hypervector types:
+    # `HV(this)` encodes an object deterministically via `hash(this)` — the
+    # positional argument is never a dimension; dimensionality is set with `D`.
+    @testset "constructor convention $HV" for HV in [
+            BinaryHV, BipolarHV, TernaryHV, RealHV,
+            GradedHV, GradedBipolarHV, FHRR,
+        ]
+        @test length(HV(42)) == 10_000  # 42 is a token, not a dimension
+        @test HV(42) == HV(42)          # deterministic per object
+        @test HV(:cat) == HV(:cat)
+        @test HV(:cat) != HV(:dog)
+        @test length(HV(:cat; D = n)) == n
+        @test length(HV(; D = n)) == n
+
+        # encoding an Integer warns that it is not a dimension; other tokens don't
+        @test_logs (:warn, r"never the dimensionality") match_mode = :any HV(42)
+        @test_logs min_level = Logging.Warn HV(:cat)
+    end
+
     @testset "BipolarHV" begin
         hdv = BipolarHV(; D = n)
 

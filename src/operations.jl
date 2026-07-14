@@ -159,6 +159,21 @@ function bundle(::FHRR, hdvs, r)
     return FHRR(r)
 end
 
+"""
+    bundle(hvs; kwargs...)
+
+Bundle (superpose) a collection of hypervectors into a single hypervector that is
+similar to every input. Overloaded as the `+` operator.
+
+The aggregation rule depends on the hypervector type: majority vote with
+deterministic tie-breaking ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise
+addition ([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy aggregation
+([`GradedHV`](@ref), [`GradedBipolarHV`](@ref)) or phasor addition ([`FHRR`](@ref)).
+
+# See also
+
+[`bind`](@ref), [`similarity`](@ref)
+"""
 function bundle(hdvs; kwargs...)
     hv = first(hdvs)
     r = empty_vector(hv)
@@ -169,6 +184,23 @@ Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
 
 # BINDING
 # -------
+"""
+    bind(hv1, hv2)
+    bind(hvs::AbstractVector{<:AbstractHV})
+
+Bind (associate) hypervectors into a single hypervector that is dissimilar to its
+inputs while preserving distances. Overloaded as the `*` operator and inverted by
+[`unbind`](@ref) (`/`).
+
+The binding rule depends on the hypervector type: XOR of the stored bits, which is
+self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplication
+([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy XOR ([`GradedHV`](@ref),
+[`GradedBipolarHV`](@ref)) or complex multiplication ([`FHRR`](@ref)).
+
+# See also
+
+[`bundle`](@ref), [`unbind`](@ref), [`similarity`](@ref)
+"""
 Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # default
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
