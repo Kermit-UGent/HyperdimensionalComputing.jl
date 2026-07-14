@@ -101,6 +101,9 @@ LinearAlgebra.norm(hv::AbstractHV) = norm(hv.v)
 normalize!(hv::AbstractHV) = hv
 normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 
+# Types that carry an element distribution (`distr` field) override the
+# instance method so that e.g. `perturbate` resamples from the vector's own
+# distribution, not the type default.
 eldist(hv::AbstractHV) = eldist(typeof(hv))
 empty_vector(hv::AbstractHV) = zero(hv.v)
 
@@ -544,6 +547,7 @@ function normalize!(hv::RealHV)
     return hv
 end
 eldist(::Type{<:RealHV}) = Normal()
+eldist(hv::RealHV) = hv.distr
 
 
 # -------------------------------------------------------------------------------------- GradedHV
@@ -631,6 +635,7 @@ Base.similar(hv::GradedHV) = GradedHV(; D = length(hv), distr = hv.distr)
 Base.zeros(hv::GradedHV) = fill!(similar(hv.v), one(eltype(hv.v)) / 2)
 normalize!(hv::GradedHV) = (clamp!(hv.v, 0, 1); hv)
 eldist(::Type{<:GradedHV}) = Beta(1, 1)
+eldist(hv::GradedHV) = hv.distr
 empty_vector(hv::GradedHV) = fill!(zero(hv.v), 0.5)
 
 
@@ -718,6 +723,7 @@ Base.copy(hv::GradedBipolarHV) = GradedBipolarHV(copy(hv.v), hv.distr)
 Base.similar(hv::GradedBipolarHV) = GradedBipolarHV(; D = length(hv), distr = hv.distr)
 normalize!(hv::GradedBipolarHV) = (clamp!(hv.v, -1, 1); hv)
 eldist(::Type{<:GradedBipolarHV}) = 2Beta(1, 1) - 1
+eldist(hv::GradedBipolarHV) = hv.distr
 
 # Fourier Holographic Reduced Representations
 # --------------------------------------------

@@ -111,6 +111,24 @@ Random.seed!(42)
         @test isapprox(std(collect(normalize!(x * y))), 5; rtol = 0.1)
     end
 
+    # regression (TODO §1.5c): perturbate used to draw replacement elements from
+    # the TYPE-default distribution, ignoring the instance's `distr` — right
+    # metadata, wrong-distribution elements
+    @testset "perturbate resamples from hv.distr" begin
+        I = 1:5_000
+        x = RealHV(; D = 10_000, distr = Normal(0, 5), seed = 1)
+        xp = perturbate(x, I; rng = Xoshiro(1))
+        @test isapprox(std(xp.v[I]), 5; rtol = 0.1)
+
+        g = GradedHV(; D = 10_000, distr = Beta(10, 2), seed = 1)
+        gp = perturbate(g, I; rng = Xoshiro(1))
+        @test isapprox(mean(gp.v[I]), mean(Beta(10, 2)); rtol = 0.05)
+
+        gb = GradedBipolarHV(; D = 10_000, distr = 2Beta(10, 2) - 1, seed = 1)
+        gbp = perturbate(gb, I; rng = Xoshiro(1))
+        @test isapprox(mean(gbp.v[I]), mean(2Beta(10, 2) - 1); rtol = 0.1)
+    end
+
     # regression (TODO §1.6): shift! and the clamp!-based normalize! methods
     # used to return the raw wrapped vector instead of the hypervector
     @testset "in-place operations return the hypervector" begin

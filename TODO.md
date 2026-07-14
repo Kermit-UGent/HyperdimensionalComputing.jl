@@ -150,7 +150,11 @@ exactly 0.0 when both are built from one shared `level(...)` ladder.
 - [ ] Fix: build the ladder once in `convertlevel` (and/or make `level`
   deterministic given the base vector), then assert the roundtrip in tests.
 
-### 1.5c `perturbate` resamples from the TYPE-default distribution, not `hv.distr`
+### 1.5c `perturbate` resamples from the TYPE-default distribution, not `hv.distr` — FIXED (2026-07-14)
+Instance-level `eldist(hv) = hv.distr` methods added for RealHV/GradedHV/
+GradedBipolarHV (the type-level defaults stay for constructors); `level()` ladders
+built from custom-distr hypervectors are fixed by the same dispatch. Locked by a
+resampled-element statistics testset in `test/operations.jl`. Original notes:
 Found (by execution) during the §1.5 pattern sweep, deliberately not fixed in that
 PR. `eldist(hv::AbstractHV) = eldist(typeof(hv))` (`src/types.jl`) ignores the
 instance's `distr`, and the byte-vec `perturbate!` methods draw replacement
@@ -159,7 +163,7 @@ resamples with std ≈ 1.01 (should be ≈ 5); `GradedHV(distr = Beta(10, 2))` (
 0.833) resamples with mean ≈ 0.498. The result *carries the right `distr`
 metadata but wrong-distribution elements* — the same silent-numerics family as
 §1.5. Also affects `level()` ladders built from custom-distr hypervectors.
-- [ ] Fix: `eldist(hv::RealHV) = hv.distr` (and GradedHV/GradedBipolarHV);
+- [x] Fix: `eldist(hv::RealHV) = hv.distr` (and GradedHV/GradedBipolarHV);
   lock with a resampled-element statistics test like the ones above.
 
 ### 1.5b `unbind` / `/` for RealHV — RESOLVED by design decision (2026-07-14)
