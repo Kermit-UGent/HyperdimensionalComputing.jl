@@ -42,19 +42,20 @@ export multiset,
     hashtable,
     crossproduct,
     ngrams,
-    graph,
-    level,
-    encodelevel,
-    decodelevel,
-    convertlevel
+    graph
 
 include("encode.jl")
 export encode,
+    decode,
     AbstractEncoding,
     KMer,
     NGram,
     Sequence,
-    BagOfSymbols
+    BagOfSymbols,
+    AbstractEncoder,
+    LevelEncoder,
+    RandomProjection,
+    rethreshold
 
 include("inference.jl")
 export similarity,

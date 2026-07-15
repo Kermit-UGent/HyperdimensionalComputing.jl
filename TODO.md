@@ -22,10 +22,29 @@ The package now has an explicit layer taxonomy: **primitives** (`operations.jl`)
   #53** (windows as atomic hashed tokens — genuinely different from `NGram(n)`,
   which shift-binds symbol encodings via `ngrams`); also `Sequence()` and
   `BagOfSymbols()`. Extension point: one struct + one `encode` method.
-- [ ] Follow-up PR: stateful encoders as an `AbstractEncoder{HV}` hierarchy with
-  `encode`/`decode` — `RandomProjection` (fixed projection matrix) and
-  `LevelEncoder` (fixed level set; subsumes the §1.4b ladder problem). `encode`
-  deliberately keeps its first argument free for encoder instances.
+- [x] Stateful encoders as an `AbstractEncoder{HV}` hierarchy with
+  `encode`/`decode` — **`LevelEncoder` landed (2026-07-15)**: builds its level
+  set once at construction (fixes §1.4b by construction), replaces and deletes
+  the `level`/`encodelevel`/`decodelevel`/`convertlevel` family. Ladder
+  (perturbation, all types, `bandwidth` keyword) + fractional power encoding
+  (FHRR, `β`), selected by dispatch. `encode` deliberately keeps its first
+  argument free for encoder instances.
+- [x] `RandomProjection` as the next `AbstractEncoder{HV}` — **landed
+  (2026-07-15)**: fixed `D × d` projection matrix (`:gaussian`/`:bipolar`/
+  `:sparse_ternary`), per-type nonlinearities, parametric scalar-or-vector
+  ternary threshold `θ` (+ data-driven `target_sparsity` constructor,
+  `rethreshold` sharing `R`), supplied-matrix constructor, FHRR = random
+  Fourier features via the shared internal `phase_encode(z, β)` helper (also
+  now used by `LevelEncoder`'s fractional power path — single source of
+  truth). Closes the colour/embedding (RGB / ESM-2-style feature-vector)
+  random-projection gap.
+- [ ] Shared item-memory/codebook abstraction (labelled HV collection +
+  nearest-neighbour lookup): now seeded by `LevelEncoder(levels, values)` — its
+  `decode` is built on that stored collection. `RandomProjection`'s
+  `decode(rp, hv, references)` clean-up is the **second consumer** of the same
+  shape (currently via raw `nearest_neighbor` over a user-supplied reference
+  set); the tutorial's colour reverse-lookup and a future `train`/`predict`
+  need it too. Factor it out.
 
 ---
 
@@ -140,15 +159,21 @@ Remaining inconsistencies found by verification (not yet fixed):
   (`doctest(fix = true)`) — element signs flipped, so **the doctest CI job fails
   until this is done**.
 
-### 1.4b Instance-path `convertlevel` builds encoder and decoder over DIFFERENT ladders
+### 1.4b Instance-path `convertlevel` builds encoder and decoder over DIFFERENT ladders — FIXED (2026-07-15)
+Fixed structurally by the `LevelEncoder` refactor (§0): the level set is built
+once in the constructor and shared by every `encode`/`decode` call, and `seed`
+makes the whole ladder deterministic. The old function family (including the
+broken instance path) is deleted, no deprecation shims. Locked by the
+"one shared level set" testset in `test/encoding.jl` (exact grid round-trips +
+`!isdefined` checks for the removed names). Original notes:
 Found (by execution) while fixing §1.4, deliberately NOT fixed in that PR.
 `convertlevel(hv::AbstractHV, numvals)` calls `encodelevel(hv, ...)` and
 `decodelevel(hv, ...)`, each of which builds its own `level(hv, m)` ladder — and
 `level` perturbation is unseeded, so the two ladders share only the base vector.
 Measured: `decode(encode(x))` errors up to 1.0 (mean 0.41) on the instance path vs
 exactly 0.0 when both are built from one shared `level(...)` ladder.
-- [ ] Fix: build the ladder once in `convertlevel` (and/or make `level`
-  deterministic given the base vector), then assert the roundtrip in tests.
+- [x] Fix: build the ladder once (now: in the `LevelEncoder` constructor), then
+  assert the roundtrip in tests.
 
 ### 1.5c `perturbate` resamples from the TYPE-default distribution, not `hv.distr` — FIXED (2026-07-14)
 Instance-level `eldist(hv) = hv.distr` methods added for RealHV/GradedHV/
@@ -270,6 +295,33 @@ users an export conflict.
   `HV(this; D)` — no `rng` keyword; always `Xoshiro(hash(this))`. Breaking in
   output: every seeded/token vector changed; README + example outputs regenerated.
 
+### 2.6 `RandomProjection(TernaryHV, ::AbstractMatrix)` positional collision (found 2026-07-15)
+
+The merged ternary constructor reads the positional matrix as **training data**
+when `target_sparsity` is given and as a **supplied projection matrix**
+otherwise — same positional shape, opposite meanings, disambiguated only by
+keyword presence. The "ternary constructor: positional collision" testset in
+`test/encoding.jl` pins what tests *can* pin: each path's documented reading,
+and that a data-shaped (non-square) matrix misread as a projection matrix
+cannot encode the intended features (immediate `DimensionMismatch` at first
+use). What tests cannot make safe, deliberately not patched in that test-only
+pass:
+
+- A **square** matrix is genuinely ambiguous: both readings yield a working
+  encoder, so a forgotten `target_sparsity` silently produces a projection
+  encoder built from data (and vice versa is undetectable).
+- The misread's error is a downstream feature-length `DimensionMismatch`; it
+  never names the actual mistake (matrix misread as R instead of X).
+- The ternary method's signature carries the data-path keywords, so the
+  supplied-matrix path **silently accepts and ignores** `D`, `matrix` and
+  `seed` (`RandomProjection(TernaryHV, R; D = 500)` returns a
+  `size(R, 1)`-dimensional encoder); the generic-type equivalent throws a
+  `MethodError`. Inconsistent and unlockable without blessing it.
+- [ ] Fix by renaming one path rather than patching: a keyword-only or
+  distinctly named data-driven constructor (e.g. `fit_sparsity(TernaryHV, X;
+  target_sparsity, ...)` or `RandomProjection(TernaryHV, d; from_data = X)`),
+  and reject inapplicable kwargs on the supplied-matrix path.
+
 ---
 
 ## 3. README (the first thing JuliaCon attendees will open)
@@ -324,7 +376,7 @@ users an export conflict.
   is used" but `method` is a mandatory kwarg for plain vectors (`src/inference.jl:38`).
   Also `:hamming` returns a match *count*, not a similarity in [0,1] — document or normalize.
 - [ ] Typo `src/inference.jl:71`: "and `u`` " (stray backtick).
-- [ ] `level` docstring: document the perturbation-based correlation mechanism and the FHRR `^`-based variant.
+- [x] ~~`level` docstring: document the perturbation-based correlation mechanism and the FHRR `^`-based variant~~ (obsolete: the family was replaced by `LevelEncoder`, whose docstring documents both mechanisms with doctests).
 - [ ] Issue #36: the intro tutorial's ngrams example yields the wrong result — re-derive it.
 - [ ] Developer docs: how to add a new HV type (required methods: constructor,
   `eldist`, `empty_vector`, `bundle`, `bind`, `similarity`, traits…).
@@ -339,7 +391,7 @@ Coverage gaps (each hid a §1 bug):
   approximate fuzzy recovery for the graded types, exact FHRR division, and the
   explicit `ArgumentError` for RealHV.
 - [ ] `perturbate` on FHRR (currently broken, §1.3).
-- [ ] Instance-path `encodelevel`/`decodelevel`/`convertlevel` (currently broken, §1.4).
+- [x] ~~Instance-path `encodelevel`/`decodelevel`/`convertlevel` (currently broken, §1.4)~~ (family deleted; `LevelEncoder` has its own testset: all 7 types, round-trips, bandwidth, FPE, precomputed constructor, bounds).
 - [ ] `bundle`/`bind` preserving custom `distr` (§1.5).
 - [ ] `similarity(...; method = :jaccard / :hamming)` — only `:cosine` is tested.
 - [ ] `isapprox` bootstrap path — the whole similarity testset is skipped for
