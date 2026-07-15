@@ -112,7 +112,7 @@ filling == 🥩 + 🧅 + 🧀
 
 similarity(filling).([🥩, 🧅, 🧀, 🍞])
 
-# ### Binding $\otimes$: _associating_ 
+# ### Binding $\otimes$: _associating_
 #
 # Binding combines hypervectors into a new one that is *dissimilar to its inputs*. It is the
 # tool for associating hypervectors to create new concepts. Let's define a `ROLE` hypervector
