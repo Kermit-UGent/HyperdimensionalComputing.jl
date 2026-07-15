@@ -7,7 +7,7 @@ Multiset of input hypervectors, bundles all the input hypervectors together.
 - `vs::AbstractVector{<:AbstractHV}`: Hypervectors
 
 # Example
-```
+```julia-repl
 julia> vs = BinaryHV.('a':'j'; D = 10)  # a hypervector for each character
 10-element Vector{BinaryHV}:
  10-element BinaryHV with 5 true and 5 false
@@ -40,11 +40,11 @@ julia> multiset(vs)
 This encoding is based on the following mathematical notation:
 
 ```math
-\\oplus_{i=1}^{m} V_i
+\\bigoplus_{i=1}^{m} V_i
 ```
 
-where `V` is the hypervector collection, `m` is the size of the hypervector collection,
-`i` is the position of the entry in the collection, and `\\oplus` is the bundling operation.
+where \$V\$ is the hypervector collection, \$m\$ is the size of the hypervector collection,
+\$i\$ is the position of the entry in the collection, and \$\\oplus\$ is the bundling operation.
 
 # References
 
@@ -67,7 +67,7 @@ Binding of multiple hypervectors, binds all the input hypervectors together.
 - `vs::AbstractVector{<:AbstractHV}`: Hypervectors
 
 # Examples
-```
+```julia-repl
 julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> multibind(vs)
@@ -89,11 +89,11 @@ julia> multibind(vs)
 This encoding is based on the following mathematical notation:
 
 ```math
-\\otimes_{i=1}^{m} V_i
+\\bigotimes_{i=1}^{m} V_i
 ```
 
-where `V` is the hypervector collection, `m` is the size of the hypervector collection,
-`i` is the position of the entry in the collection, and `\\otimes` is the binding operation.
+where \$V\$ is the hypervector collection, \$m\$ is the size of the hypervector collection,
+\$i\$ is the position of the entry in the collection, and \$\\otimes\$ is the binding operation.
 
 # References
 
@@ -117,7 +117,7 @@ Bundling-based sequence. The first value is not permuted, the last value is perm
 - `vs::AbstractVector{<:AbstractHV}`: Hypervector sequence
 
 # Examples
-```
+```julia-repl
 julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> bundlesequence(vs)
@@ -139,11 +139,11 @@ julia> bundlesequence(vs)
 This encoding is based on the following mathematical notation:
 
 ```math
-\\oplus_{i=1}^{m} \\Pi(V_i, i-1)
+\\bigoplus_{i=1}^{m} \\rho(V_i, i-1)
 ```
 
-where `V` is the hypervector collection, `m` is the size of the hypervector collection,
-`i` is the position of the entry in the collection, and `\\oplus` and `\\Pi` are the
+where \$V\$ is the hypervector collection, \$m\$ is the size of the hypervector collection,
+\$i\$ is the position of the entry in the collection, and \$\\oplus\$ and \$\\rho\$ are the
 bundling and shift operations.
 
 # References
@@ -168,7 +168,7 @@ Binding-based sequence. The first value is not permuted, the last value is permu
 - `vs::AbstractVector{<:AbstractHV}`: Hypervector sequence
 
 # Examples
-```
+```julia-repl
 julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> bindsequence(vs)
@@ -190,11 +190,11 @@ julia> bindsequence(vs)
 This encoding is based on the following mathematical notation:
 
 ```math
-\\otimes_{i=1}^{m} \\Pi(V_i, i-1)
+\\bigotimes_{i=1}^{m} \\rho(V_i, i-1)
 ```
 
-where `V` is the hypervector collection, `m` is the size of the hypervector collection,
-`i` is the position of the entry in the collection, and `\\otimes` and `\\Pi` are the
+where \$V\$ is the hypervector collection, \$m\$ is the size of the hypervector collection,
+\$i\$ is the position of the entry in the collection, and \$\\otimes\$ and \$\\rho\$ are the
 binding and shift operations.
 
 # References
@@ -221,7 +221,7 @@ to encode as hypervector.
 - `values::AbstractVector{<:AbstractHV}`: Values hypervectors
 
 # Example
-```
+```julia-repl
 julia> ks = BinaryHV.([:name, :age, :city]; D = 10);  # key hypervectors
 
 julia> vs = BinaryHV.(["Alice", "42", "Ghent"]; D = 10);  # value hypervectors
@@ -245,12 +245,12 @@ julia> hashtable(ks, vs)
 This encoding is based on the following mathematical notation:
 
 ```math
-\\oplus_{i=1}^{m} K_i \\otimes V_i
+\\bigoplus_{i=1}^{m} K_i \\otimes V_i
 ```
 
-where `K` and `V` are the key and value hypervector collections, `m` is the size of the
-hypervector collection, `i` is the position of the entry in the collection, and `\\otimes`
-and `\\oplus` are the binding and bundling operations.
+where \$K\$ and \$V\$ are the key and value hypervector collections, \$m\$ is the size of the
+hypervector collection, \$i\$ is the position of the entry in the collection, and \$\\otimes\$
+and \$\\oplus\$ are the binding and bundling operations.
 
 # References
 
@@ -272,7 +272,7 @@ Cross product between two sets of hypervectors.
 - `V::AbstractVector{<:AbstractHV}`: Hypervectors
 
 # Examples
-```
+```julia-repl
 julia> us = BinaryHV.('a':'e'; D = 10);
 
 julia> vs = BinaryHV.('v':'z'; D = 10);
@@ -296,16 +296,18 @@ julia> crossproduct(us, vs)
 This encoding strategy first creates a multiset from both input hypervector sets,
 which are then bound together to generate all cross products, i.e.
 
-U₁ × V₁ + U₁ × V₂ + ... + U₁ × Vₘ + ... + Uₙ × Vₘ
+```math
+U_1 \\times V_1 + U_1 \\times V_2 + ... + U_1 \\times V_m + ... + U_n \\times V_m
+```
 
 This encoding is based on the following formula:
 
 ```math
-(\\oplus_{i=1}^{m} U_i) \\otimes (\\oplus_{i=1}^{n} V_i)
+\\bigoplus_{i=1}^{m} U_i \\ \\otimes \\ \\bigoplus_{i=1}^{n} V_i
 ```
 
-where U and V are collections of hypervectors, `m` and `n` are the sizes of the U and V collections,
-`ì` is the position in the hypervector collection, and `\\oplus` and `\\otimes` are the bundling
+where \$U\$ and \$V\$ are collections of hypervectors, \$m\$ and \$n\$ are the sizes of the U and V collections,
+\$i\$ is the position in the hypervector collection, and \$\\oplus\$ and \$\\otimes\$ are the bundling
 and binding operations.
 
 # References
@@ -327,7 +329,7 @@ Creates a hypervector with the _n_-gram statistics of the input.
 - `n::Int = 3`: _n_-gram size
 
 # Examples
-```
+```julia-repl
 julia> vs = BinaryHV.('a':'j'; D = 10);  # a hypervector for each character
 
 julia> ngrams(vs)
@@ -349,12 +351,12 @@ julia> ngrams(vs)
 This encoding is defined by the following mathematical notation:
 
 ```math
-\\oplus_{i=1}^{m-n}\\otimes_{j=1}^{n-1}\\Pi^{n-j-1}(V_{i+j})
+\\bigoplus_{i=1}^{m-n}\\bigotimes_{j=1}^{n-1}\\rho^{n-j-1}(V_{i+j})
 ```
 
-where `V` is the collection of hypervectors, `m` is the number of hypervectors in the
-collection `V`, `n` is the window size, `i` is the position in the sequence, `j` is the
-position in the _n_-gram, and `\\oplus`, `\\otimes` and `\\Pi` are the bundling, binding
+where \$V\$ is the collection of hypervectors, \$m\$ is the number of hypervectors in the
+collection \$V\$, \$n\$ is the window size, \$i\$ is the position in the sequence, \$j\$ is the
+position in the _n_-gram, and \$\\oplus\$, \$\\otimes\$ and \$\\rho\$ are the bundling, binding
 and shift operations.
 
 !!! note
@@ -386,26 +388,29 @@ end
 Graph for `source`-`target` pairs. Can be directed or undirected.
 
 # Arguments
-- `source::T`: Source node hypervectors
-- `target::T`: Target node hypervectors
+- `source::AbstractVector{<:AbstractHV}`: Set of source node hypervectors
+- `target::AbstractVector{<:AbstractHV}`: Set of target node hypervectors
 - `directed::Bool = false`: Whether the graph is directed or not
 
 # Example
-```
-julia> nodes = BinaryHV.('a':'d'; D = 10);  # a hypervector for each node
 
-julia> graph(nodes[[1, 1, 2, 3]], nodes[[2, 3, 4, 4]])  # edges a-b, a-c, b-d, c-d
-10-element BinaryHV with 2 true and 8 false:
+```julia-repl
+julia> V = [BinaryHV(i; D = 10) for i in 1:7];
+
+julia> E = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4; 4 5; 5 6; 6 7]; # Lollipop graph
+
+julia> graph(V[E[:, 1]], V[E[:, 2]])
+10-element BinaryHV with 7 true and 3 false:
+ 1
+ 1
  0
+ 1
+ 1
  1
  0
  0
- 0
  1
- 0
- 0
- 0
- 0
+ 1
 ```
 
 # Extended help
@@ -414,17 +419,17 @@ This encoding is based on the following mathematical notation:
 
 *Undirected graphs*
 ```math
-\\oplus_{i=1}^{m} S_i \\otimes T_i
+\\bigoplus_{i=1}^{E} V_i \\otimes V_j
 ```
 
 *Directed graphs*
 ```math
-\\oplus_{i=1}^{m} S_i \\otimes \\Pi(T_i)
+\\bigoplus_{i=1}^{E} V_i \\otimes \\rho(V_j)
 ```
 
-where `K` and `V` are the key and value hypervector collections, `m` is the size of the
-hypervector collection, `i` is the position of the entry in the collection, and `\\otimes`,
-`\\oplus` and `\\Pi` are the binding, bundling and shift operations.
+where \$V\$ is the node hypervector, \$i\$ and \$j\$ refer to the source and target nodes,
+\$E\$ is the set of edges between nodes in the graph, and \$\\otimes\$,
+\$\\oplus\$ and \$\\rho\$ are the binding, bundling and shift operations.
 
 # See also
 
@@ -473,18 +478,44 @@ Generate an encoding function based on `level`, for encoding numerical values. I
 that gives the corresponding hypervector for a given numerical input.
 
 # Arguments
-- hvlevels::AbstractVector{<:AbstractHV}: vector of hypervectors representing the level encoding
-- numvalues: the range or vector with the corresponding numerical values
-- [testbound=false]: optional keyword argument to check whether the provided value is in bounds
+- `hvlevels::AbstractVector{<:AbstractHV}`: vector of hypervectors representing the level encoding
+- `numvalues`: the range or vector with the corresponding numerical values
+- `testbound::Bool = false`: optional keyword argument to check whether the provided value is in bounds
 
 # Example
-```julia
-numvalues = range(0, 2pi, 100)
-hvlevels = level(BipolarHV(), 100)
+```julia-repl
+julia> numvalues = range(0, 2pi, 100)
+0.0:0.06346651825433926:6.283185307179586
 
-encoder = encodelevel(hvlevels, numvalues)
+julia> hvlevels = level(BipolarHV(), 100)
+100-element Vector{BipolarHV}:
+ 10000-element BipolarHV with 4962 positives and 5038 negatives
+ 10000-element BipolarHV with 4970 positives and 5030 negatives
+ 10000-element BipolarHV with 4972 positives and 5028 negatives
+ 10000-element BipolarHV with 4966 positives and 5034 negatives
+ 10000-element BipolarHV with 4972 positives and 5028 negatives
+ ⋮
+ 10000-element BipolarHV with 4954 positives and 5046 negatives
+ 10000-element BipolarHV with 4938 positives and 5062 negatives
+ 10000-element BipolarHV with 4964 positives and 5036 negatives
+ 10000-element BipolarHV with 4954 positives and 5046 negatives
+ 10000-element BipolarHV with 4966 positives and 5034 negatives
 
-encoder(pi/3)  # hypervector that best represents this numerical value
+julia> encoder = encodelevel(hvlevels, numvalues);
+
+julia> encoder(pi/3)  # hypervector that best represents this numerical value
+10000-element BipolarHV with 4982 positives and 5018 negatives:
+  1
+  1
+ -1
+ -1
+ -1
+  ⋮
+ -1
+ -1
+ -1
+ -1
+  1
 ```
 """
 function encodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues; testbound = false)
@@ -515,17 +546,32 @@ Generate a decoding function based on `level`, for decoding numerical values. It
 that gives the numerical value for a given hypervector, based on similarity matching.
 
 # Arguments
-- hvlevels::AbstractVector{<:AbstractHV}: vector of hypervectors representing the level encoding
-- numvalues: the range or vector with the corresponding numerical values
+- `hvlevels::AbstractVector{<:AbstractHV}`: vector of hypervectors representing the level encoding
+- `numvalues`: the range or vector with the corresponding numerical values
 
 # Example
-```julia
-numvalues = range(0, 2pi, 100)
-hvlevels = level(BipolarHV(), 100)
+```julia-repl
+julia> numvalues = range(0, 2pi, 100)
+0.0:0.06346651825433926:6.283185307179586
 
-decoder = decodelevel(hvlevels, numvalues)
+julia> hvlevels = level(BipolarHV(), 100)
+100-element Vector{BipolarHV}:
+ 10000-element BipolarHV with 5036 positives and 4964 negatives
+ 10000-element BipolarHV with 5038 positives and 4962 negatives
+ 10000-element BipolarHV with 5042 positives and 4958 negatives
+ 10000-element BipolarHV with 5032 positives and 4968 negatives
+ 10000-element BipolarHV with 5024 positives and 4976 negatives
+ ⋮
+ 10000-element BipolarHV with 5026 positives and 4974 negatives
+ 10000-element BipolarHV with 5026 positives and 4974 negatives
+ 10000-element BipolarHV with 5008 positives and 4992 negatives
+ 10000-element BipolarHV with 5016 positives and 4984 negatives
+ 10000-element BipolarHV with 5006 positives and 4994 negatives
 
-decoder(hvlevels[17])  # value that closely matches the corresponding HV
+julia> decoder = decodelevel(hvlevels, numvalues);
+
+julia> decoder(hvlevels[17])  # value that closely matches the corresponding HV
+1.0154642920694281
 ```
 """
 function decodelevel(hvlevels::AbstractVector{<:AbstractHV}, numvalues; testbound = false)

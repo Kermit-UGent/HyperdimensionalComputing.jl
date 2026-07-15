@@ -8,7 +8,11 @@ Documentation for [HyperdimensionalComputing](https://github.com/MichielStock/Hy
 
 ## Overview
 
-HyperdimensionalComputing.jl provides types and operations for hyperdimensional computing (HDC), a brain-inspired computational paradigm that represents and manipulates information using high-dimensional vectors. The package supports multiple vector symbolic architectures (BSC, MAP, FHRR, graded) with composable encoding strategies for sets, sequences, key-value pairs, graphs, and numeric levels.
+HyperdimensionalComputing.jl provides types and operations for hyperdimensional computing (HDC),
+a brain-inspired computational paradigm that represents and manipulates information using
+high-dimensional vectors. The package supports multiple vector symbolic architectures (BSC, MAP,
+FHRR, graded) with composable encoding strategies for sets, sequences, key-value pairs, graphs,
+and numeric levels.
 
 ## Manual
 
@@ -18,10 +22,4 @@ Pages = [
     "examples.md"
 ]
 Depth = 2
-```
-
-## Index
-
-```@index
-Pages = ["index.md"]
 ```

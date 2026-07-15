@@ -10,20 +10,24 @@ SOURCE_FILES = Glob.glob("*.jl", TUTORIALS)
 foreach(fn -> Literate.markdown(fn, TUTORIALS), SOURCE_FILES)
 
 # Setup Documenter.jl
+# The doctest setup mirrors what the doctest CI step uses: Xoshiro for seeded,
+# reproducible RNG in examples and Distributions for the `distr` keyword examples.
 DocMeta.setdocmeta!(
     HyperdimensionalComputing,
     :DocTestSetup,
-    :(using HyperdimensionalComputing); recursive = true
+    :(using HyperdimensionalComputing, Distributions; using Random: Xoshiro);
+    recursive = true
 )
 
 # Get repository information dynamically for fork support
-repo_owner = "Kermit-UGent"
-repo_name = "HyperdimensionalComputing.jl"
-repo_url = "$repo_owner/$repo_name"
+repo_url = get(ENV, "GITHUB_REPOSITORY", "KERMIT-UGent/HyperdimensionalComputing.jl")
+repo_name = split(repo_url, "/")[end]
+repo_owner = split(repo_url, "/")[1]
 
 makedocs(;
     modules = [HyperdimensionalComputing],
     authors = "KERMIT research group and contributors",
+    repo = "https://github.com/$repo_url/blob/{commit}{path}#{line}",
     sitename = "HyperdimensionalComputing.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
@@ -36,15 +40,12 @@ makedocs(;
         "Examples" => [
             "Introduction to HDC" => "examples/introduction-to-hdc.md",
             "What's the Dollar of Mexico?" => "examples/whats-the-dollar-of-mexico.md",
-            "Iris dataset" => "examples/iris.md",
+            "Predictive modelling with HDC: Iris dataset" => "examples/iris.md",
         ],
         "API" => "api.md",
     ],
     checkdocs = :exports,
-    # Downgrade "missing docstring" / empty "@docs block" errors to warnings so the
-    # build still renders while the API reference is being completed. Other error
-    # categories (parse errors, broken @refs, failing @example blocks) still fail.
-    warnonly = true #[:missing_docs, :docs_block],
+    warnonly = [:missing_docs],
 )
 
 deploydocs(; repo = "github.com/$repo_url")

@@ -1,4 +1,4 @@
-# # Iris dataset
+# # Predictive modelling with HDC: Iris dataset
 #
 # This example shows an end-to-end, classical machine-learning workflow built entirely out of
 # hyperdimensional computing (HDC) primitives: we encode the numeric [Iris

@@ -69,9 +69,7 @@ Render a hypervector as a square unicode heatmap of its leading `⌊√D⌋²` e
 Only available when UnicodePlots is loaded (`using UnicodePlots`); implemented in
 the UnicodePlotting package extension.
 
-# See also
-
-[`unicodehistogram`](@ref)
+See also [`unicodehistogram`](@ref).
 """
 function unicodeheatmap end
 
@@ -85,8 +83,6 @@ and [`TernaryHV`](@ref); phases for [`FHRR`](@ref)).
 Only available when UnicodePlots is loaded (`using UnicodePlots`); implemented in
 the UnicodePlotting package extension.
 
-# See also
-
-[`unicodeheatmap`](@ref)
+See also [`unicodeheatmap`](@ref).
 """
 function unicodehistogram end

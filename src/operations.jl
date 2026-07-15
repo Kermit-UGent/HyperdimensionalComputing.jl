@@ -253,8 +253,23 @@ Base.:/(hv1::HV, hv2::HV) where {HV <: AbstractHV} = unbind(hv1, hv2)
 # --------
 
 # Shifting / Permutation
+"""
+    shift!(hv::AbstractHV, k::Int)
+
+Permutes hypervector in-place by a specified number of shifts.
+
+This operations is used to assign an order to hypervectors.
+"""
 shift!(hv::AbstractHV, k = 1) = (circshift!(hv.v, k); hv)
 
+
+"""
+    shift(hv::AbstractHV, k::Int)
+
+Permutes hypervector in-place by a specified number of shifts.
+
+This operations is used to assign an order to hypervectors.
+"""
 function shift(hv::AbstractHV, k = 1)
     r = similar(hv)
     r.v .= circshift(hv.v, k)
@@ -272,7 +287,18 @@ function shift(hv::V, k = 1) where {V <: Union{BinaryHV, BipolarHV}}
     return V(circshift!(v, hv.v, k))
 end
 
+"""
+    ρ(hv::AbstractHV, k::Int = 1)
+
+Alias of [`shift`](@ref).
+"""
 ρ(hv::AbstractHV, k = 1) = shift(hv, k)
+
+"""
+    ρ!(hv::AbstractHV, k::Int = 1)
+
+Alias of [`shift!`](@ref).
+"""
 ρ!(hv::AbstractHV, k = 1) = shift!(hv, k)
 
 
@@ -392,7 +418,76 @@ function perturbate!(::Type{HVBitVec}, hv::AbstractHV, binargs; rng::AbstractRNG
     return hv
 end
 
+"""
+    perturbate!(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG)
+
+Perturbate hypervectors by randomly flipping values.
+
+Refer to [`perturbate`](@ref) for example use cases.
+"""
 perturbate!(hv, args...; rng::AbstractRNG = Random.default_rng()) = perturbate!(vectype(hv), hv, args...; rng = rng)
+
+"""
+    perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.GLOBAL_RNG)
+
+Perturbate hypervectors by randomly flipping values.
+
+# Examples
+
+```julia-repl
+julia> v = BinaryHV(ones(10))
+10-element BinaryHV with 10 true and 0 false:
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+
+julia> perturbate(v, 1)
+10-element BinaryHV with 9 true and 1 false:
+ 1
+ 1
+ 1
+ 1
+ 1
+ 0
+ 1
+ 1
+ 1
+ 1
+
+julia> perturbate(v, 0.5)
+10-element BinaryHV with 5 true and 5 false:
+ 0
+ 1
+ 1
+ 0
+ 1
+ 0
+ 0
+ 1
+ 0
+ 1
+
+julia> perturbate(v, [1,2,3])
+10-element BinaryHV with 7 true and 3 false:
+ 0
+ 0
+ 0
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+```
+"""
 perturbate(hv::AbstractHV, args...; rng::AbstractRNG = Random.default_rng(), kwargs...) = perturbate!(copy(hv), args...; rng = rng, kwargs...)
 
 # OTHER
