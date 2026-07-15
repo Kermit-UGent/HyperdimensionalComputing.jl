@@ -29,13 +29,22 @@ The package now has an explicit layer taxonomy: **primitives** (`operations.jl`)
   (perturbation, all types, `bandwidth` keyword) + fractional power encoding
   (FHRR, `β`), selected by dispatch. `encode` deliberately keeps its first
   argument free for encoder instances.
-- [ ] `RandomProjection` (fixed projection matrix) as the next
-  `AbstractEncoder{HV}`.
+- [x] `RandomProjection` as the next `AbstractEncoder{HV}` — **landed
+  (2026-07-15)**: fixed `D × d` projection matrix (`:gaussian`/`:bipolar`/
+  `:sparse_ternary`), per-type nonlinearities, parametric scalar-or-vector
+  ternary threshold `θ` (+ data-driven `target_sparsity` constructor,
+  `rethreshold` sharing `R`), supplied-matrix constructor, FHRR = random
+  Fourier features via the shared internal `phase_encode(z, β)` helper (also
+  now used by `LevelEncoder`'s fractional power path — single source of
+  truth). Closes the colour/embedding (RGB / ESM-2-style feature-vector)
+  random-projection gap.
 - [ ] Shared item-memory/codebook abstraction (labelled HV collection +
   nearest-neighbour lookup): now seeded by `LevelEncoder(levels, values)` — its
-  `decode` is built on that stored collection. The tutorial's colour
-  reverse-lookup and a future `train`/`predict` need the same shape; factor it
-  out when the second consumer appears.
+  `decode` is built on that stored collection. `RandomProjection`'s
+  `decode(rp, hv, references)` clean-up is the **second consumer** of the same
+  shape (currently via raw `nearest_neighbor` over a user-supplied reference
+  set); the tutorial's colour reverse-lookup and a future `train`/`predict`
+  need it too. Factor it out.
 
 ---
 
@@ -285,6 +294,33 @@ users an export conflict.
   `seed` builds a fresh `Xoshiro(seed)`), and the deterministic constructor is
   `HV(this; D)` — no `rng` keyword; always `Xoshiro(hash(this))`. Breaking in
   output: every seeded/token vector changed; README + example outputs regenerated.
+
+### 2.6 `RandomProjection(TernaryHV, ::AbstractMatrix)` positional collision (found 2026-07-15)
+
+The merged ternary constructor reads the positional matrix as **training data**
+when `target_sparsity` is given and as a **supplied projection matrix**
+otherwise — same positional shape, opposite meanings, disambiguated only by
+keyword presence. The "ternary constructor: positional collision" testset in
+`test/encoding.jl` pins what tests *can* pin: each path's documented reading,
+and that a data-shaped (non-square) matrix misread as a projection matrix
+cannot encode the intended features (immediate `DimensionMismatch` at first
+use). What tests cannot make safe, deliberately not patched in that test-only
+pass:
+
+- A **square** matrix is genuinely ambiguous: both readings yield a working
+  encoder, so a forgotten `target_sparsity` silently produces a projection
+  encoder built from data (and vice versa is undetectable).
+- The misread's error is a downstream feature-length `DimensionMismatch`; it
+  never names the actual mistake (matrix misread as R instead of X).
+- The ternary method's signature carries the data-path keywords, so the
+  supplied-matrix path **silently accepts and ignores** `D`, `matrix` and
+  `seed` (`RandomProjection(TernaryHV, R; D = 500)` returns a
+  `size(R, 1)`-dimensional encoder); the generic-type equivalent throws a
+  `MethodError`. Inconsistent and unlockable without blessing it.
+- [ ] Fix by renaming one path rather than patching: a keyword-only or
+  distinctly named data-driven constructor (e.g. `fit_sparsity(TernaryHV, X;
+  target_sparsity, ...)` or `RandomProjection(TernaryHV, d; from_data = X)`),
+  and reject inapplicable kwargs on the supplied-matrix path.
 
 ---
 

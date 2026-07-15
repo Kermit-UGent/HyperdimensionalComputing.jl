@@ -157,6 +157,17 @@ hv = encode(lvl, π / 3)                      # hypervector for a numeric value
 decode(lvl, hv)                              # ≈ π/3, via similarity matching
 ```
 
+Fixed-length feature vectors (an RGB triple, an embedding — standardize them first!)
+are encoded with `RandomProjection`, which projects through a matrix drawn once and
+shared by every call; for `FHRR` this is exactly a random Fourier feature map, whose
+similarity approximates a Gaussian kernel:
+
+```julia
+rp = RandomProjection(BipolarHV, 3)          # ℝ³ → 10,000-dimensional hypervectors
+hv = encode(rp, [0.9, -0.2, 0.4])            # nearby inputs ↦ similar hypervectors
+decode(rp, hv, references)                   # nearest-neighbour clean-up (needs a codebook)
+```
+
 Finally, the `similarity` function can be used to compare two hypervectors, by default using
 the best similarity metric for the hypervector type:
 

@@ -167,6 +167,34 @@ using Distributions
         @test occursin("$(count(==(-1), collect(x))) negatives", s)
     end
 
+    # Sharp edges of the `false ↦ +1 / true ↦ -1` storage convention. These
+    # lock CURRENT, deliberate behaviour — the convention is load-bearing
+    # (XOR on stored bits IS the ±1 product) and each trap below has caused a
+    # real bug (the original polarity flip; RandomProjection's bipolar
+    # nonlinearity). Do not "fix" these; they are documented-by-test so the
+    # obvious-but-wrong idiom trips a red test instead of shipping silent
+    # corruption. (Bind identity, construction round-trip and the zero-throws
+    # are locked in the two BipolarHV testsets above.)
+    @testset "BipolarHV sharp edges" begin
+        # `sign.(z)` is NOT a valid real-to-bipolar map: sign(0) = 0, and zero
+        # has no bipolar state — this is the trap RandomProjection's bipolar
+        # nonlinearity had to avoid
+        @test_throws ArgumentError BipolarHV(sign.([0.5, -1.2, 0.0, 2.0]))
+
+        # Bool vectors are RAW STORED BITS, not logical positivity:
+        # true ↦ -1, false ↦ +1 — the opposite of what "true is positive"
+        # intuition expects, deliberately, so bind-as-XOR is the exact product
+        @test collect(BipolarHV([true, false, true])) == [-1, 1, -1]
+
+        # hence the correct thresholding of reals is an explicit ±1 ifelse;
+        # the "obvious" BipolarHV(z .> 0) hits the raw-bits path and silently
+        # yields the OPPOSITE polarity — both are pinned so the difference is
+        # on record
+        z = [0.5, -1.2, 2.0]   # no zeros: only polarity is at issue here
+        @test collect(BipolarHV(ifelse.(z .> 0, 1, -1))) == [1, -1, 1]
+        @test collect(BipolarHV(z .> 0)) == [-1, 1, -1]   # inverted! never reach for this
+    end
+
     @testset "BinaryHV" begin
         hdv = BinaryHV(; D = n)
 

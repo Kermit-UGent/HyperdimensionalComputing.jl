@@ -53,7 +53,9 @@ export encode,
     Sequence,
     BagOfSymbols,
     AbstractEncoder,
-    LevelEncoder
+    LevelEncoder,
+    RandomProjection,
+    rethreshold
 
 include("inference.jl")
 export similarity,
