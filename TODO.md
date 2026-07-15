@@ -22,10 +22,20 @@ The package now has an explicit layer taxonomy: **primitives** (`operations.jl`)
   #53** (windows as atomic hashed tokens — genuinely different from `NGram(n)`,
   which shift-binds symbol encodings via `ngrams`); also `Sequence()` and
   `BagOfSymbols()`. Extension point: one struct + one `encode` method.
-- [ ] Follow-up PR: stateful encoders as an `AbstractEncoder{HV}` hierarchy with
-  `encode`/`decode` — `RandomProjection` (fixed projection matrix) and
-  `LevelEncoder` (fixed level set; subsumes the §1.4b ladder problem). `encode`
-  deliberately keeps its first argument free for encoder instances.
+- [x] Stateful encoders as an `AbstractEncoder{HV}` hierarchy with
+  `encode`/`decode` — **`LevelEncoder` landed (2026-07-15)**: builds its level
+  set once at construction (fixes §1.4b by construction), replaces and deletes
+  the `level`/`encodelevel`/`decodelevel`/`convertlevel` family. Ladder
+  (perturbation, all types, `bandwidth` keyword) + fractional power encoding
+  (FHRR, `β`), selected by dispatch. `encode` deliberately keeps its first
+  argument free for encoder instances.
+- [ ] `RandomProjection` (fixed projection matrix) as the next
+  `AbstractEncoder{HV}`.
+- [ ] Shared item-memory/codebook abstraction (labelled HV collection +
+  nearest-neighbour lookup): now seeded by `LevelEncoder(levels, values)` — its
+  `decode` is built on that stored collection. The tutorial's colour
+  reverse-lookup and a future `train`/`predict` need the same shape; factor it
+  out when the second consumer appears.
 
 ---
 
@@ -140,15 +150,21 @@ Remaining inconsistencies found by verification (not yet fixed):
   (`doctest(fix = true)`) — element signs flipped, so **the doctest CI job fails
   until this is done**.
 
-### 1.4b Instance-path `convertlevel` builds encoder and decoder over DIFFERENT ladders
+### 1.4b Instance-path `convertlevel` builds encoder and decoder over DIFFERENT ladders — FIXED (2026-07-15)
+Fixed structurally by the `LevelEncoder` refactor (§0): the level set is built
+once in the constructor and shared by every `encode`/`decode` call, and `seed`
+makes the whole ladder deterministic. The old function family (including the
+broken instance path) is deleted, no deprecation shims. Locked by the
+"one shared level set" testset in `test/encoding.jl` (exact grid round-trips +
+`!isdefined` checks for the removed names). Original notes:
 Found (by execution) while fixing §1.4, deliberately NOT fixed in that PR.
 `convertlevel(hv::AbstractHV, numvals)` calls `encodelevel(hv, ...)` and
 `decodelevel(hv, ...)`, each of which builds its own `level(hv, m)` ladder — and
 `level` perturbation is unseeded, so the two ladders share only the base vector.
 Measured: `decode(encode(x))` errors up to 1.0 (mean 0.41) on the instance path vs
 exactly 0.0 when both are built from one shared `level(...)` ladder.
-- [ ] Fix: build the ladder once in `convertlevel` (and/or make `level`
-  deterministic given the base vector), then assert the roundtrip in tests.
+- [x] Fix: build the ladder once (now: in the `LevelEncoder` constructor), then
+  assert the roundtrip in tests.
 
 ### 1.5c `perturbate` resamples from the TYPE-default distribution, not `hv.distr` — FIXED (2026-07-14)
 Instance-level `eldist(hv) = hv.distr` methods added for RealHV/GradedHV/
@@ -324,7 +340,7 @@ users an export conflict.
   is used" but `method` is a mandatory kwarg for plain vectors (`src/inference.jl:38`).
   Also `:hamming` returns a match *count*, not a similarity in [0,1] — document or normalize.
 - [ ] Typo `src/inference.jl:71`: "and `u`` " (stray backtick).
-- [ ] `level` docstring: document the perturbation-based correlation mechanism and the FHRR `^`-based variant.
+- [x] ~~`level` docstring: document the perturbation-based correlation mechanism and the FHRR `^`-based variant~~ (obsolete: the family was replaced by `LevelEncoder`, whose docstring documents both mechanisms with doctests).
 - [ ] Issue #36: the intro tutorial's ngrams example yields the wrong result — re-derive it.
 - [ ] Developer docs: how to add a new HV type (required methods: constructor,
   `eldist`, `empty_vector`, `bundle`, `bind`, `similarity`, traits…).
@@ -339,7 +355,7 @@ Coverage gaps (each hid a §1 bug):
   approximate fuzzy recovery for the graded types, exact FHRR division, and the
   explicit `ArgumentError` for RealHV.
 - [ ] `perturbate` on FHRR (currently broken, §1.3).
-- [ ] Instance-path `encodelevel`/`decodelevel`/`convertlevel` (currently broken, §1.4).
+- [x] ~~Instance-path `encodelevel`/`decodelevel`/`convertlevel` (currently broken, §1.4)~~ (family deleted; `LevelEncoder` has its own testset: all 7 types, round-trips, bandwidth, FPE, precomputed constructor, bounds).
 - [ ] `bundle`/`bind` preserving custom `distr` (§1.5).
 - [ ] `similarity(...; method = :jaccard / :hamming)` — only `:cosine` is tested.
 - [ ] `isapprox` bootstrap path — the whole similarity testset is skipped for

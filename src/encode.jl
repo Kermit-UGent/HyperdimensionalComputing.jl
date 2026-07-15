@@ -10,10 +10,12 @@ Layer taxonomy of the package:
 - encoders     (this file):     raw data in, hypervector out
 
 `encode(HV, x)` is the canonical token path; sequence strategies compose the
-token path with the existing combinators. Stateful encoders (random projection,
-level encoders) are a planned follow-up as an `AbstractEncoder{HV}` hierarchy
-whose instances will slot in as the first argument of `encode` — nothing here
-may claim `encode(::SomeState, ...)` for other purposes.
+token path with the existing combinators. Stateful encoders live in the
+`AbstractEncoder{HV}` hierarchy: their instances hold hypervector state built
+once at construction and slot in as the first argument of `encode` (and support
+the inverse map `decode`). `LevelEncoder` is the first; `RandomProjection` is
+the planned sibling — nothing here may claim `encode(::SomeState, ...)` for
+other purposes.
 =#
 
 """
@@ -195,4 +197,204 @@ end
 
 function encode(HV::Type{<:AbstractHV}, x, ::BagOfSymbols; kwargs...)
     return multiset([encode(HV, s; kwargs...) for s in collect(x)])
+end
+
+# Stateful encoders
+# -----------------
+
+"""
+    AbstractEncoder{HV <: AbstractHV}
+
+Supertype of **stateful encoders**: objects that hold hypervector state built
+once at construction (a level set, a projection matrix, ...) and are then used
+through [`encode`](@ref) and its inverse [`decode`](@ref). Where an
+[`AbstractEncoding`](@ref) strategy is a pure recipe (`encode(HV, x, strategy)`),
+an `AbstractEncoder` instance *is* the shared state: encoding a value and
+decoding a hypervector are only consistent against the same state, so the state
+lives in the object, not in the call. Instances slot in as the first argument
+of `encode`.
+
+Currently implemented: [`LevelEncoder`](@ref). A `RandomProjection` encoder is
+the planned next sibling.
+"""
+abstract type AbstractEncoder{HV <: AbstractHV} end
+
+"""
+    LevelEncoder{HV} <: AbstractEncoder{HV}
+
+Encoder for numeric values: maps a number to a hypervector such that **close
+values get similar hypervectors** and distant values get quasi-orthogonal ones,
+via a set of level-correlated hypervectors built once at construction and
+shared by every [`encode`](@ref)/[`decode`](@ref) call.
+
+Two mechanisms, selected by dispatch on the hypervector type:
+
+- **Ladder** (every hypervector type): start from a random base hypervector and
+  repeatedly [`perturbate`](@ref) a fraction `bandwidth` of the positions to
+  obtain successive levels. Adjacent levels are similar; the first and last are
+  quasi-orthogonal. Values are quantized to the nearest level.
+- **Fractional power encoding** ([`FHRR`](@ref) only, the default for `FHRR`):
+  `encode(lvl, x) = base^(β * x)` using complex exponentiation — continuous, no
+  quantization. `β` plays the same bandwidth role as the ladder's flip
+  fraction: smaller values give slower similarity decay.
+
+# Constructors
+
+    LevelEncoder(HV, values;   D = 10_000, bandwidth = 2/length(values), seed, rng)
+    LevelEncoder(HV, range, n; D = 10_000, bandwidth = 2/n, seed, rng)
+    LevelEncoder(FHRR, values; D = 10_000, β = 1/(max - min), seed, rng)
+    LevelEncoder(levels::AbstractVector{<:AbstractHV}, values)
+
+The first two build a ladder: over the given `values` (any vector or range of
+numbers), or `n` evenly spaced levels over `range` (anything `minimum`/`maximum`
+accept: a range, a vector, a 2-tuple). For `FHRR` the two-argument form builds a
+fractional power encoder whose `values` serve as the decoding grid; ask for a
+ladder explicitly by passing a level count `n`. The last form wraps precomputed
+level hypervectors with their values. Passing `seed` makes the whole encoder
+deterministic.
+
+# Examples
+
+```jldoctest levelencoder
+julia> lvl = LevelEncoder(BipolarHV, (0, 1), 20; seed = 42)
+LevelEncoder{BipolarHV}: 20 levels over [0.0, 1.0] (ladder, bandwidth = 0.1)
+
+julia> decode(lvl, encode(lvl, 0.25))   # round-trips within one grid step
+0.2631578947368421
+
+julia> similarity(encode(lvl, 0.3), encode(lvl, 0.35)) >
+           similarity(encode(lvl, 0.3), encode(lvl, 0.9))
+true
+```
+
+Fractional power encoding for `FHRR` is continuous:
+
+```jldoctest levelencoder
+julia> fpe = LevelEncoder(FHRR, 0:0.1:10; seed = 1)
+LevelEncoder{FHRR}: 101 levels over [0.0, 10.0] (fractional power, β = 0.1)
+
+julia> decode(fpe, encode(fpe, 3.7); method = :analytic) ≈ 3.7
+true
+```
+
+# See also
+
+[`encode`](@ref), [`decode`](@ref), [`AbstractEncoder`](@ref),
+[`perturbate`](@ref)
+"""
+struct LevelEncoder{HV <: AbstractHV, V <: AbstractVector{<:Real}, B <: Union{AbstractHV, Nothing}} <: AbstractEncoder{HV}
+    levels::Vector{HV}
+    values::V
+    base::B             # FPE base hypervector; `nothing` for ladder/precomputed
+    bandwidth::Float64  # ladder: flip fraction per step; FPE: β; NaN: precomputed
+    function LevelEncoder(levels::Vector{HV}, values::V, base::B, bandwidth::Real) where {HV <: AbstractHV, V <: AbstractVector{<:Real}, B <: Union{AbstractHV, Nothing}}
+        length(levels) == length(values) ||
+            throw(ArgumentError("number of levels ($(length(levels))) must match number of values ($(length(values)))"))
+        isempty(levels) && throw(ArgumentError("a LevelEncoder needs at least one level"))
+        return new{HV, V, B}(levels, values, base, Float64(bandwidth))
+    end
+end
+
+LevelEncoder(levels::AbstractVector{<:AbstractHV}, values::AbstractVector{<:Real}) =
+    LevelEncoder(collect(levels), values, nothing, NaN)
+
+# The ladder builder itself, shared by the constructor methods below: the
+# two-argument FHRR method dispatches to fractional power encoding instead, so
+# the explicit-level-count form must reach the ladder without re-dispatching.
+function ladder(
+        HV::Type{<:AbstractHV}, values::AbstractVector{<:Real};
+        D::Int = 10_000, bandwidth::Real = 2 / length(values),
+        seed = nothing, rng::AbstractRNG = Random.default_rng()
+    )
+    n = length(values)
+    n ≥ 2 || throw(ArgumentError("a level encoding needs at least 2 levels, got $n"))
+    0 < bandwidth ≤ 1 ||
+        throw(ArgumentError("bandwidth must be a flip fraction in (0, 1], got $bandwidth"))
+    rng = seed === nothing ? rng : Xoshiro(seed)
+    levels = [HV(; D, rng)]
+    while length(levels) < n
+        push!(levels, perturbate(last(levels), float(bandwidth); rng))
+    end
+    return LevelEncoder(levels, values, nothing, bandwidth)
+end
+
+LevelEncoder(HV::Type{<:AbstractHV}, values::AbstractVector{<:Real}; kwargs...) =
+    ladder(HV, values; kwargs...)
+
+LevelEncoder(HV::Type{<:AbstractHV}, range, n::Integer; kwargs...) =
+    ladder(HV, Base.range(minimum(range), maximum(range), n); kwargs...)
+
+function LevelEncoder(
+        F::Type{<:FHRR}, values::AbstractVector{<:Real};
+        β::Real = 1 / (maximum(values) - minimum(values)),
+        D::Int = 10_000, seed = nothing, rng::AbstractRNG = Random.default_rng()
+    )
+    length(values) ≥ 2 ||
+        throw(ArgumentError("a level encoding needs at least 2 values, got $(length(values))"))
+    rng = seed === nothing ? rng : Xoshiro(seed)
+    base = F(; D, rng)
+    levels = [base^(β * x) for x in values]
+    return LevelEncoder(levels, values, base, β)
+end
+
+"""
+    encode(lvl::LevelEncoder, x::Number; testbound = false)
+
+Encode the number `x` as a hypervector using the encoder's shared level set:
+the level whose value is nearest to `x` for a ladder encoder, or the continuous
+`base^(β * x)` for a fractional power ([`FHRR`](@ref)) encoder. Out-of-range
+values snap to the nearest level by default; pass `testbound = true` to throw a
+`DomainError` instead. See [`LevelEncoder`](@ref).
+"""
+function encode(lvl::LevelEncoder, x::Number; testbound::Bool = false)
+    if testbound
+        lo, hi = extrema(lvl.values)
+        lo ≤ x ≤ hi || throw(DomainError(x, "value outside the encoder's range [$lo, $hi]"))
+    end
+    lvl.base === nothing || return lvl.base^(lvl.bandwidth * x)
+    (_, ind) = findmin(v -> abs(x - v), lvl.values)
+    return lvl.levels[ind]
+end
+
+"""
+    decode(lvl::LevelEncoder, hv::AbstractHV; method = :nearest)
+
+Decode a hypervector back to the numeric value of the most similar level in the
+encoder's shared level set (nearest-neighbour by [`similarity`](@ref) — robust,
+works for noisy hypervectors such as bundles, but quantized to the encoder's
+value grid).
+
+For a fractional power ([`FHRR`](@ref)) encoder, `method = :analytic` instead
+inverts the phases directly (`mean(real(log(hv) / log(base)) / β)`), giving a
+continuous, grid-free estimate — but it assumes a *clean* encoded vector and
+degrades on noisy ones; the default `:nearest` is the robust choice. See
+[`LevelEncoder`](@ref).
+"""
+function decode(lvl::LevelEncoder, hv::AbstractHV; method::Symbol = :nearest)
+    if method === :nearest
+        (_, ind) = findmax(v -> similarity(v, hv), lvl.levels)
+        return lvl.values[ind]
+    elseif method === :analytic
+        lvl.base === nothing && throw(
+            ArgumentError(
+                "analytic decoding requires a fractional power (FHRR) encoder; " *
+                    "this encoder has no base hypervector — use `method = :nearest`"
+            )
+        )
+        return mean(@. real(log(hv.v) / log(lvl.base.v)) / lvl.bandwidth)
+    else
+        throw(ArgumentError("unknown decoding method $(repr(method)); expected :nearest or :analytic"))
+    end
+end
+
+function Base.show(io::IO, lvl::LevelEncoder{HV}) where {HV}
+    lo, hi = extrema(lvl.values)
+    mechanism = if lvl.base !== nothing
+        "fractional power, β = $(lvl.bandwidth)"
+    elseif isnan(lvl.bandwidth)
+        "precomputed levels"
+    else
+        "ladder, bandwidth = $(lvl.bandwidth)"
+    end
+    return print(io, "LevelEncoder{$(nameof(HV))}: $(length(lvl.levels)) levels over [$lo, $hi] ($mechanism)")
 end

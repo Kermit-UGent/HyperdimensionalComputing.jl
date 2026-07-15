@@ -72,7 +72,7 @@
     end
 
     @testset "Similarity matrix" begin
-        levels = level(RealHV(; D = 100), 10)
+        levels = LevelEncoder(RealHV, (0, 1), 10; D = 100).levels
         M = similarity(levels)
         @test M isa Matrix
         @test size(M) == (10, 10)

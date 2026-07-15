@@ -98,49 +98,92 @@ end
         @test_throws AssertionError graph(hvs[s], hvs[[1, 2, 3]])
     end
 
-    @testset "levels" begin
-        numvals = 0:0.1:2pi
-        levels = level(BinaryHV(; D = 100), numvals)
+    @testset "LevelEncoder" begin
+        @testset "ladder for all types: $HV" for HV in
+            (BinaryHV, BipolarHV, TernaryHV, RealHV, GradedHV, GradedBipolarHV, FHRR)
+            lvl = LevelEncoder(HV, (0, 1), 20; D = 1_000, seed = 17)
+            @test lvl isa LevelEncoder{<:HV}
+            @test lvl.base === nothing   # the ladder mechanism, even for FHRR
+            @test length(lvl.levels) == length(lvl.values) == 20
+            @test encode(lvl, 0.5) isa HV
+            # round-trips within one quantization step
+            step = 1 / 19
+            for x in (0.0, 0.31, 0.77, 1.0)
+                @test abs(decode(lvl, encode(lvl, x)) - x) ≤ step
+            end
+            # adjacent levels are more similar than distant ones
+            @test similarity(lvl.levels[1], lvl.levels[2]) >
+                similarity(lvl.levels[1], lvl.levels[end])
+        end
 
-        @test length(levels) == length(numvals)
-        @test eltype(levels) <: BinaryHV
+        @testset "one shared level set (regression TODO §1.4/§1.4b)" begin
+            # every encode/decode call draws from the level set built at
+            # construction, so separate calls are comparable by construction —
+            # the incomparability bug of the old encodelevel/decodelevel
+            # function family cannot occur
+            lvl = LevelEncoder(BipolarHV, (0, 2π), 50; D = 2_000, seed = 3)
+            @test encode(lvl, 1.0) == encode(lvl, 1.0)
+            a, b, c = encode(lvl, 1.0), encode(lvl, 1.1), encode(lvl, 5.0)
+            @test similarity(a, b) > similarity(a, c)
+            # encode and decode share ONE ladder: exact round-trip on the grid
+            # (the old instance path built two ladders; error was up to 1.0)
+            for v in lvl.values[[1, 10, 25, 50]]
+                @test decode(lvl, encode(lvl, v)) == v
+            end
+            # seeded construction is fully deterministic
+            @test LevelEncoder(BipolarHV, (0, 1), 5; D = 100, seed = 9).levels ==
+                LevelEncoder(BipolarHV, (0, 1), 5; D = 100, seed = 9).levels
+            # the old function family is gone, not just patched
+            for f in (:level, :encodelevel, :decodelevel, :convertlevel)
+                @test !isdefined(HyperdimensionalComputing, f)
+            end
+        end
 
-        encoder, decoder = convertlevel(levels, numvals)
-        hv = encoder(1.467)
-        @test hv isa BinaryHV
-        x = decoder(hv)
-        @test 1 ≤ x ≤ 2
+        @testset "bandwidth controls similarity decay" begin
+            ends(lvl) = similarity(lvl.levels[1], lvl.levels[end])
+            narrow = LevelEncoder(BipolarHV, (0, 1), 20; D = 2_000, bandwidth = 0.02, seed = 7)
+            wide = LevelEncoder(BipolarHV, (0, 1), 20; D = 2_000, bandwidth = 0.3, seed = 7)
+            @test ends(narrow) > ends(wide)
+            # FPE: β is the analogous knob
+            slow = LevelEncoder(FHRR, 0:0.1:1; β = 0.05, D = 2_000, seed = 7)
+            fast = LevelEncoder(FHRR, 0:0.1:1; β = 1.0, D = 2_000, seed = 7)
+            @test similarity(encode(slow, 0.0), encode(slow, 1.0)) >
+                similarity(encode(fast, 0.0), encode(fast, 1.0))
+        end
 
-        # regression (TODO §1.4): the instance-based decodelevel/convertlevel
-        # path used to throw a MethodError caused by kwarg forwarding
-        dec = decodelevel(BinaryHV(; D = 100, seed = 3), numvals)
-        @test dec isa Function
-        enc2, dec2 = convertlevel(BinaryHV(; D = 100, seed = 3), numvals)
-        @test enc2(1.0) isa BinaryHV
-        @test minimum(numvals) ≤ dec2(enc2(1.0)) ≤ maximum(numvals)
-        # keywords also forward through the shared-ladder path
-        enc3, dec3 = convertlevel(levels, numvals; testbound = true)
-        @test dec3(enc3(1.467)) isa Number
-        # NOTE (TODO §1.4b): enc2/dec2 are built over *different* random ladders,
-        # so decode(encode(x)) ≈ x does not hold on the instance path — flagged,
-        # not asserted here.
-    end
+        @testset "fractional power encoding (FHRR)" begin
+            fpe = LevelEncoder(FHRR, 0:0.1:10; D = 1_000, seed = 11)
+            @test fpe.base isa FHRR
+            hv = encode(fpe, 3.14)   # continuous: no quantization
+            @test hv isa FHRR
+            @test all(abs.(hv.v) .≈ 1)
+            # nearest-neighbour decode lands on the grid, within one step
+            @test abs(decode(fpe, hv) - 3.14) ≤ 0.1
+            # analytic decode is continuous and exact on a clean vector
+            @test decode(fpe, hv; method = :analytic) ≈ 3.14
+            # similarity decays with distance
+            @test similarity(encode(fpe, 2.0), encode(fpe, 2.2)) >
+                similarity(encode(fpe, 2.0), encode(fpe, 8.0))
+        end
 
-    @testset "FHRR numbers" begin
+        @testset "precomputed levels constructor" begin
+            src = LevelEncoder(BinaryHV, (0, 1), 10; D = 500, seed = 5)
+            lvl = LevelEncoder(src.levels, src.values)
+            @test decode(lvl, encode(lvl, 0.42)) == decode(src, encode(src, 0.42))
+            @test_throws ArgumentError LevelEncoder(src.levels, 1:3)   # length mismatch
+            # analytic decoding is FPE-only
+            @test_throws ArgumentError decode(lvl, encode(lvl, 0.5); method = :analytic)
+            @test_throws ArgumentError decode(lvl, encode(lvl, 0.5); method = :nonsense)
+        end
 
-        v = FHRR()
-
-        numvals = 0:0.1:10
-
-        encoder, decoder = convertlevel(v, numvals)
-
-        x, y, z = 2, 5, 10
-
-        hx, hy, hz = encoder.((x, y, z))
-
-        @test hx isa FHRR
-        @test similarity(hx, hy) > similarity(hx, hz)
-
-        @test decoder(hx) < decoder(hy) < decoder(hz)
+        @testset "bounds and argument checks" begin
+            lvl = LevelEncoder(BinaryHV, (0, 1), 10; D = 200, seed = 1)
+            @test encode(lvl, 3.0) == lvl.levels[end]   # snaps to nearest by default
+            @test_throws DomainError encode(lvl, 3.0; testbound = true)
+            @test encode(lvl, 0.5; testbound = true) isa BinaryHV
+            @test_throws ArgumentError LevelEncoder(BinaryHV, (0, 1), 1)
+            @test_throws ArgumentError LevelEncoder(BinaryHV, (0, 1), 10; bandwidth = 0)
+            @test_throws ArgumentError LevelEncoder(BinaryHV, (0, 1), 10; bandwidth = 1.5)
+        end
     end
 end

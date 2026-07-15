@@ -147,7 +147,15 @@ Additionally, we provide common encoder strategies for different data structures
 - `crossproduct`
 - `ngrams`
 - `graph`
-- `level`
+
+Numeric values are encoded with the stateful `LevelEncoder`, which builds a set of
+level-correlated hypervectors once and shares it across every `encode`/`decode` call:
+
+```julia
+lvl = LevelEncoder(BipolarHV, (0, 2π), 100)  # 100 levels over the interval
+hv = encode(lvl, π / 3)                      # hypervector for a numeric value
+decode(lvl, hv)                              # ≈ π/3, via similarity matching
+```
 
 Finally, the `similarity` function can be used to compare two hypervectors, by default using
 the best similarity metric for the hypervector type:

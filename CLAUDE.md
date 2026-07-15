@@ -50,7 +50,9 @@ Constructor convention (settled; each form has exactly one meaning, documented o
 - `HV(x)` — token shorthand for `encode(HV, x)`; `HV(n::Number)` **throws an ArgumentError** naming both alternatives (`D = n` / `encode(HV, n)`) — this replaced the old one-time `@warn`
 - Tuples of reals read as data, like vectors
 
-`encode` is the canonical interface: `encode(HV, x; D)` is the deterministic token path (hash → seed), `encode(HV, x, strategy)` dispatches on `AbstractEncoding` strategies: `KMer(k)` (windows as atomic hashed tokens — resolves issue #53), `NGram(n)` (symbol-level shift-binding via `ngrams`), `Sequence()` (bundlesequence), `BagOfSymbols()` (multiset). New strategies = one struct + one `encode` method. Planned follow-up: stateful `AbstractEncoder{HV}` structs (RandomProjection, LevelEncoder) with `encode`/`decode`.
+`encode` is the canonical interface: `encode(HV, x; D)` is the deterministic token path (hash → seed), `encode(HV, x, strategy)` dispatches on `AbstractEncoding` strategies: `KMer(k)` (windows as atomic hashed tokens — resolves issue #53), `NGram(n)` (symbol-level shift-binding via `ngrams`), `Sequence()` (bundlesequence), `BagOfSymbols()` (multiset). New strategies = one struct + one `encode` method.
+
+Stateful encoders live in the `AbstractEncoder{HV}` hierarchy (encode.jl): instances hold hypervector state built once at construction and slot in as the first argument of `encode`, with `decode` as the inverse. `LevelEncoder` is the first — it encodes numeric values against a shared level set (see below); `RandomProjection` is the planned sibling.
 
 Scalar `getindex` returns the element type `T`; non-scalar indexing returns a plain `Vector` of values, never a hypervector. Hypervectors are immutable (no `setindex!`).
 
@@ -75,7 +77,8 @@ In-place variants: `shift!`, `ρ!`, `perturbate!`.
 - `crossproduct(U, V)` — cross product of two sets
 - `ngrams(hvs, n)` — n-gram statistics for text/sequence encoding
 - `graph(sources, targets)` — directed/undirected graph encoding
-- `level(hv, n)` / `encodelevel` / `decodelevel` / `convertlevel` — numeric level encoding
+
+Numeric values are encoded with `LevelEncoder` (encode.jl), which replaced the old `level`/`encodelevel`/`decodelevel`/`convertlevel` function family. It builds its level set **once** at construction (the old family rebuilt it per call, producing incomparable encodings). Two mechanisms, selected by dispatch: a perturbation **ladder** for all types (`LevelEncoder(HV, range, n; bandwidth = 2/n)`, flip fraction per step) and **fractional power encoding** for FHRR (`LevelEncoder(FHRR, values; β)`, continuous via `base^(β·x)`; pass an explicit level count `n` to get a ladder instead). `encode(lvl, x)` maps a number to a hypervector; `decode(lvl, hv)` maps back via nearest-neighbour similarity (FHRR also supports `method = :analytic` for continuous, clean-vector decoding). `LevelEncoder(levels, values)` wraps precomputed hypervectors — this labelled-codebook form is the seam for a future shared item-memory abstraction.
 
 ## Similarity and inference
 
@@ -152,7 +155,7 @@ julia --project -e 'using Pkg; Pkg.test()'
 - [x] ~~`bind`: no docstring (only `unbind` has one)~~ (added)
 - [ ] `shift` / `ρ`: no docstrings
 - [ ] `perturbate` / `perturbate!`: no docstrings
-- [ ] `level`: docstring is minimal; does not explain the perturbation-based correlation mechanism
+- [x] ~~`level`: docstring is minimal; does not explain the perturbation-based correlation mechanism~~ (obsolete: the family was replaced by `LevelEncoder`, whose docstring covers both mechanisms)
 - [ ] `three_pi` and `fuzzy_xor` helper functions: no docstrings
 - [ ] Internal functions (`aggfun`, `bindfun`, `neutralbind`, `noisy_and`, `elementreduce!`, `offsetcombine`, `empty_vector`, `eldist`, `vectype`): none documented
 - [ ] `docs/make.jl`: Contents block references `examples.md` but actual pages are in `examples/` subdirectory

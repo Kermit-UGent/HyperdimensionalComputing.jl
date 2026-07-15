@@ -207,8 +207,9 @@ Random.seed!(42)
         hvm = perturbate(hv1, m; rng = Xoshiro(1))
         @test all(hvm.v[.!m] .== hv1.v[.!m])
         @test all(abs.(hvm.v[m]) .≈ 1)
-        # `level` for FHRR uses its own ^-based method, not perturbation
-        @test level(FHRR(; D = 100), 5) isa Vector{<:FHRR}
+        # the perturbation ladder (LevelEncoder with an explicit level count)
+        # works for FHRR thanks to the phase-resampling methods above
+        @test LevelEncoder(FHRR, (0, 1), 5; D = 100).levels isa Vector{<:FHRR}
     end
 
 end
