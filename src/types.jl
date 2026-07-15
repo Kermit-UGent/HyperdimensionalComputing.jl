@@ -98,7 +98,92 @@ Base.size(hv::AbstractHV) = size(hv.v)
 Base.sum(hv::AbstractHV) = sum(hv.v)
 
 LinearAlgebra.norm(hv::AbstractHV) = norm(hv.v)
+
+"""
+    normalize!(hv::AbstractHV)
+
+Normalize the input hypervector.
+
+# Examples
+
+```julia-repl
+julia> v = bundle([encode(TernaryHV, i; D = 8) for i in 1:100])
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  12
+  -2
+ -16
+  12
+  -4
+   6
+  12
+ -12
+
+julia> normalize!(v)
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  1
+ -1
+ -1
+  1
+ -1
+  1
+  1
+ -1
+
+julia> v
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  1
+ -1
+ -1
+  1
+ -1
+  1
+  1
+ -1
+"""
 normalize!(hv::AbstractHV) = hv
+
+"""
+    normalize(hv::AbstractHV)
+
+Return a copy of the normalized version of the input hypervector.
+
+# Example
+
+```julia-repl
+julia> v = bundle([encode(TernaryHV, i; D = 8) for i in 1:100])
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  12
+  -2
+ -16
+  12
+  -4
+   6
+  12
+ -12
+
+julia> normalize(v)
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  1
+ -1
+ -1
+  1
+ -1
+  1
+  1
+ -1
+
+julia> v
+8-element TernaryHV{Int64} with 4 positives, 0 zeros, and 4 negatives:
+  12
+  -2
+ -16
+  12
+  -4
+   6
+  12
+ -12
+```
+"""
 normalize(hv::AbstractHV) = (c = copy(hv); normalize!(c); c)
 
 # Types that carry an element distribution (`distr` field) override the

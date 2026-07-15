@@ -40,20 +40,12 @@ makedocs(;
         "Examples" => [
             "Introduction to HDC" => "examples/introduction-to-hdc.md",
             "What's the Dollar of Mexico?" => "examples/whats-the-dollar-of-mexico.md",
+            "Predictive modelling with HDC: Iris dataset" => "examples/iris.md",
         ],
         "API" => "api.md",
     ],
     checkdocs = :exports,
+    warnonly = [:missing_docs],
 )
 
-deploydocs(;
-    repo = "github.com/$repo_url",
-    devbranch = begin
-        current_branch = get(ENV, "GITHUB_REF", "refs/heads/main")
-        dev_branch = if occursin("develop", current_branch)
-            "develop"
-        else
-            "main"
-        end
-    end,
-)
+deploydocs(; repo = "github.com/$repo_url")
