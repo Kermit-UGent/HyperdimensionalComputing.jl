@@ -2,6 +2,38 @@
 CurrentModule = HyperdimensionalComputing
 ```
 
+```@raw html
+---
+layout: home
+
+hero:
+  name: HyperdimensionalComputing.jl
+  text: HDC/VSA in Julia
+  tagline: When the curse of dimensionality becomes a blessing. 
+  actions:
+    - theme: brand
+      text: Get started
+      link: /examples/introduction-to-hdc.html
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/cvigilv/HyperdimensionalComputing.jl
+
+features:
+  - icon: "𝓗 "
+    title: Seven hypervector families
+    details: Use binary, bipolar, ternary, real, graded, graded-bipolar, and FHRR hypervectors through one `AbstractHV` interface.
+    link: /api.html#Types
+  - icon: ⊕
+    title: The HDC algebra
+    details: Compose representations with type-specific bundling, binding, unbinding, and permutation.
+    link: /api.html#Operations
+  - icon: "{}"
+    title: Structured representations
+    details: Build multisets, sequences, key-value records, cross products, n-grams, and graphs from the same small set of operations.
+    link: /api.html#Combinators
+---
+```
+
 # HyperdimensionalComputing.jl
 
 Hyperdimensional computing (HDC), also known as vector symbolic architectures (VSA), is a

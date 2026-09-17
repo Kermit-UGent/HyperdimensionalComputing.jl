@@ -1,5 +1,7 @@
 using HyperdimensionalComputing
 using Documenter
+using DocumenterLandingPage
+using DocumenterCodeBlocks
 using Pkg, Literate, Glob
 
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true
@@ -49,6 +51,10 @@ makedocs(;
     ],
     checkdocs = :exports,
     warnonly = [:missing_docs],
+    plugins = [
+        LandingPage(),
+        CodeBlocks(),
+    ],
 )
 
 deploydocs(; repo = "github.com/$repo_url")
