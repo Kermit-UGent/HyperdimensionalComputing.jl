@@ -151,6 +151,23 @@ end
                 similarity(encode(fast, 0.0), encode(fast, 1.0))
         end
 
+        @testset "ladder follows value order (regression #69)" begin
+            v = [0.0, 0.01, 0.02, 0.03, 0.5, 1.0]
+            sorted = LevelEncoder(BipolarHV, v; D = 2_000, seed = 5)
+            shuffled = LevelEncoder(BipolarHV, v[[4, 1, 6, 3, 5, 2]]; D = 2_000, seed = 5)
+            @test shuffled.values == sorted.values == v
+            @test shuffled.levels == sorted.levels
+            # duplicates collapse to one rung each
+            @test length(LevelEncoder(BinaryHV, [0.1, 0.1, 0.5, 0.9]; D = 100).levels) == 3
+            @test_throws ArgumentError LevelEncoder(BinaryHV, [1, 1])
+            # skewed data: similarity tracks value distance, not rank distance
+            @test similarity(encode(sorted, 0.0), encode(sorted, 0.03)) >
+                similarity(encode(sorted, 0.03), encode(sorted, 0.5))
+            # an evenly spaced vector builds the same ladder as the range form
+            @test LevelEncoder(BipolarHV, collect(range(0, 1, 5)); D = 100, seed = 9).levels ==
+                LevelEncoder(BipolarHV, (0, 1), 5; D = 100, seed = 9).levels
+        end
+
         @testset "fractional power encoding (FHRR)" begin
             fpe = LevelEncoder(FHRR, 0:0.1:10; D = 1_000, seed = 11)
             @test fpe.base isa FHRR

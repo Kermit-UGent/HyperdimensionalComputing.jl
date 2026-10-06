@@ -265,6 +265,12 @@ ladder explicitly by passing a level count `n`. The last form wraps precomputed
 level hypervectors with their values. Passing `seed` makes the whole encoder
 deterministic.
 
+A ladder's `values` need not be sorted or distinct: they are sorted and
+deduplicated (`lvl.values` is stored that way), so the rungs follow numeric
+order. On an unevenly spaced grid, such as raw data values, each step flips a
+fraction proportional to its gap (`bandwidth` per average gap), so similarity
+follows value distance rather than rank.
+
 # Examples
 
 ```jldoctest levelencoder
@@ -313,19 +319,26 @@ LevelEncoder(levels::AbstractVector{<:AbstractHV}, values::AbstractVector{<:Real
 # The ladder builder itself, shared by the constructor methods below: the
 # two-argument FHRR method dispatches to fractional power encoding instead, so
 # the explicit-level-count form must reach the ladder without re-dispatching.
+# Rungs follow the sorted, deduplicated values, and each step flips a fraction
+# proportional to its gap (`bandwidth` per average gap), so similarity tracks
+# value distance; on an evenly spaced grid every step flips exactly `bandwidth`.
 function ladder(
         HV::Type{<:AbstractHV}, values::AbstractVector{<:Real};
-        D::Int = 10_000, bandwidth::Real = 2 / length(values),
+        D::Int = 10_000, bandwidth::Union{Real, Nothing} = nothing,
         seed = nothing, rng::AbstractRNG = Random.default_rng()
     )
+    issorted(values) && allunique(values) || (values = sort!(unique(values)))
     n = length(values)
-    n ≥ 2 || throw(ArgumentError("a level encoding needs at least 2 levels, got $n"))
+    n ≥ 2 || throw(ArgumentError("a level encoding needs at least 2 distinct levels, got $n"))
+    bandwidth = something(bandwidth, 2 / n)
     0 < bandwidth ≤ 1 ||
         throw(ArgumentError("bandwidth must be a flip fraction in (0, 1], got $bandwidth"))
     rng = seed === nothing ? rng : Xoshiro(seed)
+    meangap = (last(values) - first(values)) / (n - 1)
     levels = [HV(; D, rng)]
-    while length(levels) < n
-        push!(levels, perturbate(last(levels), float(bandwidth); rng))
+    for i in 2:n
+        p = min(bandwidth * (values[i] - values[i - 1]) / meangap, 1.0)
+        push!(levels, perturbate(last(levels), float(p); rng))
     end
     return LevelEncoder(levels, values, nothing, bandwidth)
 end
