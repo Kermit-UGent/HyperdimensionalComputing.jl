@@ -252,7 +252,7 @@ Two mechanisms, selected by dispatch on the hypervector type:
 
 # Constructors
 
-    LevelEncoder(HV, values;   D = 10_000, bandwidth = 2/length(values), seed, rng)
+    LevelEncoder(HV, values;   D = 10_000, bandwidth = 2/length(unique(values)), seed, rng)
     LevelEncoder(HV, range, n; D = 10_000, bandwidth = 2/n, seed, rng)
     LevelEncoder(FHRR, values; D = 10_000, β = 1/(max - min), seed, rng)
     LevelEncoder(levels::AbstractVector{<:AbstractHV}, values)
@@ -267,9 +267,19 @@ deterministic.
 
 A ladder's `values` need not be sorted or distinct: they are sorted and
 deduplicated (`lvl.values` is stored that way), so the rungs follow numeric
-order. On an unevenly spaced grid, such as raw data values, each step flips a
-fraction proportional to its gap (`bandwidth` per average gap), so similarity
-follows value distance rather than rank.
+order. `bandwidth` is the fraction of positions perturbed per (average) step,
+in `(0, 0.5]` for [`BinaryHV`](@ref) and [`BipolarHV`](@ref) (flipping more
+than half the bits would anti-correlate levels) and in `(0, 1]` otherwise; the
+`2/n` default is capped at that bound.
+Each step's fraction scales with its gap, capped at that bound, so a large gap
+yields unrelated levels rather than opposite ones.
+
+Level encoders assume the values lie on an approximately **linear scale**:
+similarity follows the difference between values. Values far from evenly
+spaced (heavily skewed data, such as PageRank scores or counts) trigger a
+warning, because most levels then cover sparse stretches while dense regions
+lose resolution. Transform such data first (`log`, ranks) or lay out an even
+grid with `LevelEncoder(HV, extrema(x), n)`.
 
 # Examples
 
@@ -322,25 +332,62 @@ LevelEncoder(levels::AbstractVector{<:AbstractHV}, values::AbstractVector{<:Real
 # Rungs follow the sorted, deduplicated values, and each step flips a fraction
 # proportional to its gap (`bandwidth` per average gap), so similarity tracks
 # value distance; on an evenly spaced grid every step flips exactly `bandwidth`.
+# A step never goes past orthogonal: flipping more than half the bits of a
+# binary/bipolar vector would anti-correlate it, while the other types redraw
+# elements, so a full redraw is the limit there.
 function ladder(
         HV::Type{<:AbstractHV}, values::AbstractVector{<:Real};
         D::Int = 10_000, bandwidth::Union{Real, Nothing} = nothing,
         seed = nothing, rng::AbstractRNG = Random.default_rng()
     )
-    issorted(values) && allunique(values) || (values = sort!(unique(values)))
+    all(isfinite, values) ||
+        throw(ArgumentError("level values must be finite, got $(first(filter(!isfinite, values)))"))
+    values = levelgrid(values)
     n = length(values)
     n ≥ 2 || throw(ArgumentError("a level encoding needs at least 2 distinct levels, got $n"))
-    bandwidth = something(bandwidth, 2 / n)
-    0 < bandwidth ≤ 1 ||
-        throw(ArgumentError("bandwidth must be a flip fraction in (0, 1], got $bandwidth"))
     rng = seed === nothing ? rng : Xoshiro(seed)
-    meangap = (last(values) - first(values)) / (n - 1)
     levels = [HV(; D, rng)]
+    maxflip = vectype(first(levels)) === HVBitVec ? 0.5 : 1.0
+    bandwidth = something(bandwidth, min(2 / n, maxflip))
+    0 < bandwidth ≤ maxflip || throw(
+        ArgumentError(
+            "bandwidth must be a flip fraction in (0, $maxflip] for $(nameof(HV)), got $bandwidth" *
+                (maxflip < 1 ? " (flipping more than half the bits anti-correlates levels)" : "")
+        )
+    )
+    warn_nonlinear(values)
+    meangap = (last(values) - first(values)) / (n - 1)
     for i in 2:n
-        p = min(bandwidth * (values[i] - values[i - 1]) / meangap, 1.0)
+        p = min(bandwidth * (values[i] - values[i - 1]) / meangap, maxflip)
         push!(levels, perturbate(last(levels), float(p); rng))
     end
     return LevelEncoder(levels, values, nothing, bandwidth)
+end
+
+levelgrid(values) = issorted(values) && allunique(values) ? values : sort!(unique(values))
+
+# How far the values are from an evenly spaced grid over the same range, as a
+# fraction of that range: the Kolmogorov–Smirnov distance to a uniform spread
+# (0 for a range, about 0.5 for heavily skewed data such as PageRank scores).
+function spacing_deviation(values)
+    lo, hi, n = first(values), last(values), length(values)
+    return maximum(abs(values[i] - (lo + (i - 1) * (hi - lo) / (n - 1))) for i in 1:n) / (hi - lo)
+end
+
+# Warn above the 1% Kolmogorov–Smirnov critical value 1.63/√n, so uniformly
+# spread data (on a linear scale, just not evenly spaced) rarely triggers it,
+# with a floor of a quarter of the range for large n.
+max_spacing_deviation(n) = max(0.25, 1.63 / sqrt(n))
+
+function warn_nonlinear(values)
+    dev = spacing_deviation(values)
+    dev > max_spacing_deviation(length(values)) && @warn(
+        "Level values are far from evenly spaced (deviation $(round(dev; digits = 2)) of the range). " *
+            "Level encoders assume an approximately linear scale; most levels will cover sparse " *
+            "stretches and dense regions lose resolution. Consider transforming the data " *
+            "(e.g. `log`, ranks) or using `LevelEncoder(HV, extrema(x), n)`."
+    )
+    return nothing
 end
 
 LevelEncoder(HV::Type{<:AbstractHV}, values::AbstractVector{<:Real}; kwargs...) =
