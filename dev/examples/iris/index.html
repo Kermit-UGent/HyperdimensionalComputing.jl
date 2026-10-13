@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl</title><meta name="title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta property="og:title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta property="twitter:title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta name="description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="og:description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="twitter:description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="og:url" content="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><meta property="twitter:url" content="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><link rel="canonical" href="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="HyperdimensionalComputing.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">HyperdimensionalComputing.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">HyperdimensionalComputing.jl</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../introduction-to-hdc/">Introduction to HDC</a></li><li><a class="tocitem" href="../encoding-data/">Encoding data</a></li><li><a class="tocitem" href="../colours/">Colours: random projections</a></li><li><a class="tocitem" href="../whats-the-dollar-of-mexico/">What&#39;s the Dollar of Mexico?</a></li><li class="is-active"><a class="tocitem" href>Predictive modelling with HDC: Iris dataset</a><ul class="internal"><li><a class="tocitem" href="#Encoding"><span>Encoding</span></a></li><li><a class="tocitem" href="#Decoding"><span>Decoding</span></a></li><li><a class="tocitem" href="#Training-a-small-model"><span>Training a small model</span></a></li><li><a class="tocitem" href="#A-second-encoding:-random-projection"><span>A second encoding: random projection</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../developers/">Developer guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Predictive modelling with HDC: Iris dataset</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Predictive modelling with HDC: Iris dataset</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Kermit-UGent/HyperdimensionalComputing.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Kermit-UGent/HyperdimensionalComputing.jl/blob/main/docs/src/examples/iris.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Predictive-modelling-with-HDC:-Iris-dataset"><a class="docs-heading-anchor" href="#Predictive-modelling-with-HDC:-Iris-dataset">Predictive modelling with HDC: Iris dataset</a><a id="Predictive-modelling-with-HDC:-Iris-dataset-1"></a><a class="docs-heading-anchor-permalink" href="#Predictive-modelling-with-HDC:-Iris-dataset" title="Permalink"></a></h1><p>This example shows an end-to-end, classical machine-learning workflow built entirely out of hyperdimensional computing (HDC) primitives: we encode the numeric <a href="https://en.wikipedia.org/wiki/Iris_flower_data_set">Iris dataset</a> into hypervectors, decode them back to check the encoding is faithful, and then train and evaluate a tiny nearest-prototype classifier. Along the way we highlight the specific <code>HyperdimensionalComputing.jl</code> functions that do the heavy lifting.</p><p>If you have not seen the core operations (mapping, bundling, binding) yet, the <em>&quot;Introduction to HDC&quot;</em> tutorial is a gentler starting point.</p><pre><code class="language-julia hljs">using HyperdimensionalComputing
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl</title><meta name="title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta property="og:title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta property="twitter:title" content="Predictive modelling with HDC: Iris dataset · HyperdimensionalComputing.jl"/><meta name="description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="og:description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="twitter:description" content="Documentation for HyperdimensionalComputing.jl."/><meta property="og:url" content="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><meta property="twitter:url" content="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><link rel="canonical" href="https://Kermit-UGent.github.io/HyperdimensionalComputing.jl/examples/iris/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="HyperdimensionalComputing.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">HyperdimensionalComputing.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">HyperdimensionalComputing.jl</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../introduction-to-hdc/">Introduction to HDC</a></li><li><a class="tocitem" href="../encoding-data/">Encoding data</a></li><li><a class="tocitem" href="../colours/">Colours: random projections</a></li><li><a class="tocitem" href="../whats-the-dollar-of-mexico/">What&#39;s the Dollar of Mexico?</a></li><li class="is-active"><a class="tocitem" href>Predictive modelling with HDC: Iris dataset</a><ul class="internal"><li><a class="tocitem" href="#Encoding"><span>Encoding</span></a></li><li><a class="tocitem" href="#Decoding"><span>Decoding</span></a></li><li><a class="tocitem" href="#Training-a-small-model"><span>Training a small model</span></a></li><li><a class="tocitem" href="#A-second-encoding:-random-projection"><span>A second encoding: random projection</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../developers/">Developer guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Predictive modelling with HDC: Iris dataset</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Predictive modelling with HDC: Iris dataset</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Kermit-UGent/HyperdimensionalComputing.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Kermit-UGent/HyperdimensionalComputing.jl/blob/main/docs/src/examples/iris.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Predictive-modelling-with-HDC:-Iris-dataset"><a class="docs-heading-anchor" href="#Predictive-modelling-with-HDC:-Iris-dataset">Predictive modelling with HDC: Iris dataset</a><a id="Predictive-modelling-with-HDC:-Iris-dataset-1"></a><a class="docs-heading-anchor-permalink" href="#Predictive-modelling-with-HDC:-Iris-dataset" title="Permalink"></a></h1><p>This example shows an end-to-end, classical machine-learning workflow built entirely out of hyperdimensional computing (HDC) primitives: we encode the numeric <a href="https://en.wikipedia.org/wiki/Iris_flower_data_set">Iris dataset</a> into hypervectors, decode them back to check the encoding is faithful, and then train and evaluate a tiny nearest-prototype classifier. Along the way we highlight the specific <code>HyperdimensionalComputing.jl</code> functions that do the heavy lifting.</p><p>If you have not seen the core operations (mapping, bundling, binding) yet, the <em>&quot;Introduction to HDC&quot;</em> tutorial is a gentler starting point.</p><pre><code class="language-julia hljs">using HyperdimensionalComputing
 using MLDatasets, DataFrames
 using Statistics
 using AlgebraOfGraphics, CairoMakie</code></pre><p>The dataset ships with <code>MLDatasets</code>. We ask for the raw arrays (<code>as_df = false</code>) rather than a <code>DataFrame</code>: <code>X</code> is a <code>4 × 150</code> matrix of measurements (sepal length/width, petal length/width, in centimetres) and <code>y</code> holds the species label of each of the 150 flowers.</p><pre><code class="language-julia hljs">X, y = Iris(as_df = false)[:]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(features = [5.1 4.9 … 6.2 5.9; 3.5 3.0 … 3.4 3.0; 1.4 1.4 … 5.4 5.1; 0.2 0.2 … 2.3 1.8], targets = InlineStrings.String15[&quot;Iris-setosa&quot; &quot;Iris-setosa&quot; … &quot;Iris-virginica&quot; &quot;Iris-virginica&quot;])</code></pre><h2 id="Encoding"><a class="docs-heading-anchor" href="#Encoding">Encoding</a><a id="Encoding-1"></a><a class="docs-heading-anchor-permalink" href="#Encoding" title="Permalink"></a></h2><p>The first thing we need to do in order to work with HDC is to encode our problem into hyperdimensional space. For that, we need an <em>encoder</em> that converts our objects in real space (denoted <span>$\mathbb{R}$</span>) into hypervectors representing the hyperdimensional space (denoted <span>$\mathbb{H}$</span>).</p><p>In this classical example we build a <strong>key–value (hash-table) encoder</strong>: each flower is a record whose <em>keys</em> are the four feature names and whose <em>values</em> are the measured numbers. We bind each value to its key and bundle the four pairs into a single hypervector – exactly what the <a href="../../api/#HyperdimensionalComputing.hashtable"><code>hashtable</code></a> encoder does.</p><p>First, we map each feature <em>name</em> to a random hypervector that will act as its key:</p><pre><code class="language-julia hljs">SEPALLENGTH = BinaryHV()
@@ -7,83 +7,83 @@ SEPALWIDTH = BinaryHV()
 PETALLENGTH = BinaryHV()
 PETALWIDTH = BinaryHV()
 H_features = [SEPALLENGTH, SEPALWIDTH, PETALLENGTH, PETALWIDTH]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{BinaryHV}:
- 10000-element BinaryHV with 5017 true and 4983 false
- 10000-element BinaryHV with 5061 true and 4939 false
- 10000-element BinaryHV with 5080 true and 4920 false
- 10000-element BinaryHV with 4973 true and 5027 false</code></pre><p>The <em>values</em> are continuous numbers, so a purely random mapping would throw away their ordering (5.0 cm and 5.1 cm would be as unrelated as 5.0 cm and 100 cm). Instead we use a <strong>level encoder</strong>: <a href="../../api/#HyperdimensionalComputing.LevelEncoder"><code>LevelEncoder</code></a> builds a ladder of hypervectors in which neighbouring levels are similar and far-apart levels are dissimilar, so numeric closeness becomes hypervector similarity. We lay out one level every 0.1 cm across the observed range:</p><pre><code class="language-julia hljs">cm = range(extrema(X)...; step = 0.1)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.1:0.1:7.9</code></pre><pre><code class="language-julia hljs">lvl = LevelEncoder(BinaryHV, cm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LevelEncoder{BinaryHV}: 79 levels over [0.1, 7.9] (ladder, bandwidth = 0.02531645569620253)</code></pre><p>The encoder <em>is</em> the ladder: it holds the level hypervectors it built at construction, so every value encoded through it lands on the same scale. <a href="../../api/#HyperdimensionalComputing.encode"><code>encode</code></a> maps a number to its closest level:</p><pre><code class="language-julia hljs">encode(lvl, 5.1)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 5084 true and 4916 false:
- 0
- 1
- 0
- 1
- 0
- 1
- 0
- 1
- 0
- 1
- ⋮
- 0
- 1
- 1
- 0
- 1
- 0
- 1
- 1
- 0</code></pre><p>We can now encode a single flower: bind each feature value to its key and bundle the pairs with <a href="../../api/#HyperdimensionalComputing.hashtable"><code>hashtable</code></a>.</p><pre><code class="language-julia hljs">encodeflower(features) = hashtable([encode(lvl, x) for x in features], H_features)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">encodeflower (generic function with 1 method)</code></pre><div class="admonition is-info" id="On-encoders-2537e706269c5c72"><header class="admonition-header">On encoders<a class="admonition-anchor" href="#On-encoders-2537e706269c5c72" title="Permalink"></a></header><div class="admonition-body"><p><code>hashtable</code> is only one of the built-in combinators. The package ships several more (<code>multiset</code>, <code>bundlesequence</code>, <code>ngrams</code>, <code>graph</code>, ...) for prototyping or training small models. For the full catalogue, see the <a href="../../api/">API reference</a>.</p></div></div><p>Applying it to every column encodes the whole dataset – 150 flowers, each now a single hypervector:</p><pre><code class="language-julia hljs">H_allflowers = map(encodeflower, eachcol(X))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">150-element Vector{BinaryHV}:
- 10000-element BinaryHV with 5018 true and 4982 false
- 10000-element BinaryHV with 5023 true and 4977 false
- 10000-element BinaryHV with 5022 true and 4978 false
- 10000-element BinaryHV with 5024 true and 4976 false
- 10000-element BinaryHV with 5019 true and 4981 false
- 10000-element BinaryHV with 4980 true and 5020 false
- 10000-element BinaryHV with 5031 true and 4969 false
- 10000-element BinaryHV with 4989 true and 5011 false
- 10000-element BinaryHV with 4990 true and 5010 false
- ⋮
- 10000-element BinaryHV with 4955 true and 5045 false
- 10000-element BinaryHV with 5031 true and 4969 false
  10000-element BinaryHV with 4994 true and 5006 false
- 10000-element BinaryHV with 4978 true and 5022 false
- 10000-element BinaryHV with 4949 true and 5051 false
- 10000-element BinaryHV with 4976 true and 5024 false
- 10000-element BinaryHV with 4999 true and 5001 false
- 10000-element BinaryHV with 4995 true and 5005 false
- 10000-element BinaryHV with 4999 true and 5001 false</code></pre><h2 id="Decoding"><a class="docs-heading-anchor" href="#Decoding">Decoding</a><a id="Decoding-1"></a><a class="docs-heading-anchor-permalink" href="#Decoding" title="Permalink"></a></h2><p>Once we have our hypervectors, we can use the same operations to decode them back into the original space. Here we exploit the fact that binding is its own inverse: <strong>unbinding</strong> a flower with a feature key recovers (an approximation of) the value hypervector for that feature.</p><p>Let&#39;s pick a random flower from the dataset:</p><pre><code class="language-julia hljs">H_flower = H_allflowers[rand(1:size(X, 2))]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 5028 true and 4972 false:
- 0
- 1
+ 10000-element BinaryHV with 5127 true and 4873 false
+ 10000-element BinaryHV with 5009 true and 4991 false
+ 10000-element BinaryHV with 4921 true and 5079 false</code></pre><p>The <em>values</em> are continuous numbers, so a purely random mapping would throw away their ordering (5.0 cm and 5.1 cm would be as unrelated as 5.0 cm and 100 cm). Instead we use a <strong>level encoder</strong>: <a href="../../api/#HyperdimensionalComputing.LevelEncoder"><code>LevelEncoder</code></a> builds a ladder of hypervectors in which neighbouring levels are similar and far-apart levels are dissimilar, so numeric closeness becomes hypervector similarity. We lay out one level every 0.1 cm across the observed range:</p><pre><code class="language-julia hljs">cm = range(extrema(X)...; step = 0.1)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.1:0.1:7.9</code></pre><pre><code class="language-julia hljs">lvl = LevelEncoder(BinaryHV, cm)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LevelEncoder{BinaryHV}: 79 levels over [0.1, 7.9] (ladder, bandwidth = 0.02531645569620253)</code></pre><p>The encoder <em>is</em> the ladder: it holds the level hypervectors it built at construction, so every value encoded through it lands on the same scale. <a href="../../api/#HyperdimensionalComputing.encode"><code>encode</code></a> maps a number to its closest level:</p><pre><code class="language-julia hljs">encode(lvl, 5.1)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 4965 true and 5035 false:
  1
  0
  0
  1
+ 0
+ 1
+ 0
+ 1
+ 1
+ 0
+ ⋮
+ 1
+ 0
+ 1
+ 0
+ 1
+ 0
+ 1
+ 1
+ 0</code></pre><p>We can now encode a single flower: bind each feature value to its key and bundle the pairs with <a href="../../api/#HyperdimensionalComputing.hashtable"><code>hashtable</code></a>.</p><pre><code class="language-julia hljs">encodeflower(features) = hashtable([encode(lvl, x) for x in features], H_features)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">encodeflower (generic function with 1 method)</code></pre><div class="admonition is-info" id="On-encoders-1dfd0b159b35a5e7"><header class="admonition-header">On encoders<a class="admonition-anchor" href="#On-encoders-1dfd0b159b35a5e7" title="Permalink"></a></header><div class="admonition-body"><p><code>hashtable</code> is only one of the built-in combinators. The package ships several more (<code>multiset</code>, <code>bundlesequence</code>, <code>ngrams</code>, <code>graph</code>, ...) for prototyping or training small models. For the full catalogue, see the <a href="../../api/">API reference</a>.</p></div></div><p>Applying it to every column encodes the whole dataset – 150 flowers, each now a single hypervector:</p><pre><code class="language-julia hljs">H_allflowers = map(encodeflower, eachcol(X))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">150-element Vector{BinaryHV}:
+ 10000-element BinaryHV with 4924 true and 5076 false
+ 10000-element BinaryHV with 5040 true and 4960 false
+ 10000-element BinaryHV with 4982 true and 5018 false
+ 10000-element BinaryHV with 5022 true and 4978 false
+ 10000-element BinaryHV with 5026 true and 4974 false
+ 10000-element BinaryHV with 4992 true and 5008 false
+ 10000-element BinaryHV with 4991 true and 5009 false
+ 10000-element BinaryHV with 4934 true and 5066 false
+ 10000-element BinaryHV with 4896 true and 5104 false
+ ⋮
+ 10000-element BinaryHV with 4980 true and 5020 false
+ 10000-element BinaryHV with 5012 true and 4988 false
+ 10000-element BinaryHV with 4965 true and 5035 false
+ 10000-element BinaryHV with 4963 true and 5037 false
+ 10000-element BinaryHV with 4990 true and 5010 false
+ 10000-element BinaryHV with 4919 true and 5081 false
+ 10000-element BinaryHV with 4932 true and 5068 false
+ 10000-element BinaryHV with 4898 true and 5102 false
+ 10000-element BinaryHV with 5015 true and 4985 false</code></pre><h2 id="Decoding"><a class="docs-heading-anchor" href="#Decoding">Decoding</a><a id="Decoding-1"></a><a class="docs-heading-anchor-permalink" href="#Decoding" title="Permalink"></a></h2><p>Once we have our hypervectors, we can use the same operations to decode them back into the original space. Here we exploit the fact that binding is its own inverse: <strong>unbinding</strong> a flower with a feature key recovers (an approximation of) the value hypervector for that feature.</p><p>Let&#39;s pick a random flower from the dataset:</p><pre><code class="language-julia hljs">H_flower = H_allflowers[rand(1:size(X, 2))]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 4991 true and 5009 false:
+ 1
+ 1
+ 0
+ 1
+ 1
  1
  0
  0
+ 0
+ 0
+ ⋮
+ 0
+ 1
+ 0
+ 0
+ 1
+ 1
+ 0
+ 1
+ 0</code></pre><p>Unbinding it with a key yields the (noisy) level hypervector for that feature – for example, its sepal length:</p><pre><code class="language-julia hljs">H_flower * SEPALLENGTH</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 5023 true and 4977 false:
+ 1
+ 0
+ 1
+ 0
+ 0
+ 1
+ 0
+ 1
+ 1
  1
  ⋮
  0
  1
  1
- 1
- 0
- 1
- 1
- 0
- 1</code></pre><p>Unbinding it with a key yields the (noisy) level hypervector for that feature – for example, its sepal length:</p><pre><code class="language-julia hljs">H_flower * SEPALLENGTH</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 5113 true and 4887 false:
- 0
- 1
- 0
- 1
- 0
- 1
- 1
- 0
- 0
- 1
- ⋮
- 1
- 1
- 0
  0
  1
  0
@@ -98,34 +98,34 @@ decodeflower(H_flower)</code></pre><pre class="documenter-example-output"><code 
  4.9
  3.1
  1.5
- 0.1</code></pre><div class="admonition is-success" id="Building-level-encoders-5fcc4d7a15b37061"><header class="admonition-header">Building level encoders<a class="admonition-anchor" href="#Building-level-encoders-5fcc4d7a15b37061" title="Permalink"></a></header><div class="admonition-body"><p><a href="../../api/#HyperdimensionalComputing.LevelEncoder"><code>LevelEncoder</code></a> offers several constructor forms: <code>LevelEncoder(HV, values)</code> (one level per value, as used here), <code>LevelEncoder(HV, range, n)</code> for <code>n</code> levels spanning a range, and <code>LevelEncoder(FHRR, values; β)</code>, which uses fractional power encoding to represent a <em>continuous</em> range instead of a discrete ladder.</p></div></div><h2 id="Training-a-small-model"><a class="docs-heading-anchor" href="#Training-a-small-model">Training a small model</a><a id="Training-a-small-model-1"></a><a class="docs-heading-anchor-permalink" href="#Training-a-small-model" title="Permalink"></a></h2><p>We can now build a classifier. The idea is beautifully simple: a class is represented by the <strong>bundle</strong> (superposition) of all its training examples, giving a single <em>prototype</em> hypervector that sits close to every flower of that species. <code>bundle</code> is the bundling operation from the introduction.</p><pre><code class="language-julia hljs">H_setosa = bundle(H_allflowers[vec(y) .== &quot;Iris-setosa&quot;])
+ 0.1</code></pre><div class="admonition is-success" id="Building-level-encoders-e1dee487916ed487"><header class="admonition-header">Building level encoders<a class="admonition-anchor" href="#Building-level-encoders-e1dee487916ed487" title="Permalink"></a></header><div class="admonition-body"><p><a href="../../api/#HyperdimensionalComputing.LevelEncoder"><code>LevelEncoder</code></a> offers several constructor forms: <code>LevelEncoder(HV, values)</code> (one level per value, as used here), <code>LevelEncoder(HV, range, n)</code> for <code>n</code> levels spanning a range, and <code>LevelEncoder(FHRR, values; β)</code>, which uses fractional power encoding to represent a <em>continuous</em> range instead of a discrete ladder.</p></div></div><h2 id="Training-a-small-model"><a class="docs-heading-anchor" href="#Training-a-small-model">Training a small model</a><a id="Training-a-small-model-1"></a><a class="docs-heading-anchor-permalink" href="#Training-a-small-model" title="Permalink"></a></h2><p>We can now build a classifier. The idea is beautifully simple: a class is represented by the <strong>bundle</strong> (superposition) of all its training examples, giving a single <em>prototype</em> hypervector that sits close to every flower of that species. <code>bundle</code> is the bundling operation from the introduction.</p><pre><code class="language-julia hljs">H_setosa = bundle(H_allflowers[vec(y) .== &quot;Iris-setosa&quot;])
 H_versicolor = bundle(H_allflowers[vec(y) .== &quot;Iris-versicolor&quot;])
-H_virginica = bundle(H_allflowers[vec(y) .== &quot;Iris-virginica&quot;])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 5000 true and 5000 false:
+H_virginica = bundle(H_allflowers[vec(y) .== &quot;Iris-virginica&quot;])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element BinaryHV with 4910 true and 5090 false:
  1
+ 1
+ 0
  1
  1
  0
  0
  1
- 1
  0
  0
- 1
  ⋮
- 1
- 1
+ 0
  1
  0
  0
  1
- 1
  0
- 1</code></pre><p>As a sanity check, let&#39;s decode each prototype and compare it against the <em>mean</em> measurements of its class. The prototypes are not just abstract vectors – decoding them recovers something very close to the class averages:</p><pre><code class="language-julia hljs">[decodeflower(H_setosa)&#39;; mean(X[:, vec(y) .== &quot;Iris-setosa&quot;], dims = 2)&#39;]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2×4 Matrix{Float64}:
- 5.0    3.5    1.4    0.2
+ 0
+ 1
+ 0</code></pre><p>As a sanity check, let&#39;s decode each prototype and compare it against the <em>mean</em> measurements of its class. The prototypes are not just abstract vectors – decoding them recovers something very close to the class averages:</p><pre><code class="language-julia hljs">[decodeflower(H_setosa)&#39;; mean(X[:, vec(y) .== &quot;Iris-setosa&quot;], dims = 2)&#39;]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2×4 Matrix{Float64}:
+ 5.2    3.4    1.6    0.2
  5.006  3.418  1.464  0.244</code></pre><pre><code class="language-julia hljs">[decodeflower(H_versicolor)&#39;; mean(X[:, vec(y) .== &quot;Iris-versicolor&quot;], dims = 2)&#39;]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2×4 Matrix{Float64}:
- 6.0    2.9   4.2   1.4
+ 6.0    2.9   4.2   1.3
  5.936  2.77  4.26  1.326</code></pre><pre><code class="language-julia hljs">[decodeflower(H_virginica)&#39;; mean(X[:, vec(y) .== &quot;Iris-virginica&quot;], dims = 2)&#39;]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2×4 Matrix{Float64}:
- 6.6    3.0    5.5    2.1
+ 6.5    2.9    5.1    2.0
  6.588  2.974  5.552  2.026</code></pre><p>Pretty close! Let&#39;s evaluate the model properly. First, we split the data into a training and a test set:</p><pre><code class="language-julia hljs">split = 0.8
 test = rand(length(y)) .&gt; split
 train = .! test</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">150-element BitVector:
@@ -152,9 +152,9 @@ train = .! test</code></pre><pre class="documenter-example-output"><code class="
 H_versicolor = bundle(H_allflowers[(vec(y) .== &quot;Iris-versicolor&quot;) .&amp;&amp; train])
 H_virginica = bundle(H_allflowers[(vec(y) .== &quot;Iris-virginica&quot;) .&amp;&amp; train])
 H_prototypes = [H_setosa, H_versicolor, H_virginica]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{BinaryHV}:
- 10000-element BinaryHV with 4980 true and 5020 false
- 10000-element BinaryHV with 4988 true and 5012 false
- 10000-element BinaryHV with 4995 true and 5005 false</code></pre><p>To classify a flower we simply find the most similar prototype with <a href="../../api/#HyperdimensionalComputing.nearest_neighbor"><code>nearest_neighbor</code></a>, which returns a <code>(similarity, index, hypervector)</code> tuple – the index tells us which class won:</p><pre><code class="language-julia hljs">id2class = unique(y)
+ 10000-element BinaryHV with 4957 true and 5043 false
+ 10000-element BinaryHV with 4975 true and 5025 false
+ 10000-element BinaryHV with 4924 true and 5076 false</code></pre><p>To classify a flower we simply find the most similar prototype with <a href="../../api/#HyperdimensionalComputing.nearest_neighbor"><code>nearest_neighbor</code></a>, which returns a <code>(similarity, index, hypervector)</code> tuple – the index tells us which class won:</p><pre><code class="language-julia hljs">id2class = unique(y)
 correct = map(findall(test)) do i
     H_test = H_allflowers[i]
     ytrue = y[i]
@@ -195,7 +195,7 @@ draw(
         * mapping(:points =&gt; &quot;Training points per class&quot;, :accuracy =&gt; &quot;Accuracy ↑&quot;)
         * visual(BoxPlot, color = :gainsboro, width = 1)
     , axis = (; aspect = 1.5, limits = (0, 50, 0.5, 1.05), xticks = 0:5:50, yticks = 0.5:0.1:1.0)
-)</code></pre><img src="61046609.png" alt="Example block output"/><p>As the plot shows, HDC is capable of few-shot learning: even a handful of examples per class gets us close to the accuracy reached with the full training set.</p><h2 id="A-second-encoding:-random-projection"><a class="docs-heading-anchor" href="#A-second-encoding:-random-projection">A second encoding: random projection</a><a id="A-second-encoding:-random-projection-1"></a><a class="docs-heading-anchor-permalink" href="#A-second-encoding:-random-projection" title="Permalink"></a></h2><p>The key–value encoder above is <em>interpretable</em>: each flower hypervector is built from named parts, which is why we could decode it feature by feature. But it is not the only way to get numeric data into hyperspace, and it is not the shortest.</p><p><a href="../../api/#HyperdimensionalComputing.RandomProjection"><code>RandomProjection</code></a> takes the whole feature vector at once, multiplying it by a fixed random matrix and applying a nonlinearity. Distances are approximately preserved, so flowers with similar measurements get similar hypervectors – without us naming a single feature.</p><pre><code class="language-julia hljs">rp = RandomProjection(BipolarHV, 4; seed = 42)
+)</code></pre><img src="429ea73e.png" alt="Example block output"/><p>As the plot shows, HDC is capable of few-shot learning: even a handful of examples per class gets us close to the accuracy reached with the full training set.</p><h2 id="A-second-encoding:-random-projection"><a class="docs-heading-anchor" href="#A-second-encoding:-random-projection">A second encoding: random projection</a><a id="A-second-encoding:-random-projection-1"></a><a class="docs-heading-anchor-permalink" href="#A-second-encoding:-random-projection" title="Permalink"></a></h2><p>The key–value encoder above is <em>interpretable</em>: each flower hypervector is built from named parts, which is why we could decode it feature by feature. But it is not the only way to get numeric data into hyperspace, and it is not the shortest.</p><p><a href="../../api/#HyperdimensionalComputing.RandomProjection"><code>RandomProjection</code></a> takes the whole feature vector at once, multiplying it by a fixed random matrix and applying a nonlinearity. Distances are approximately preserved, so flowers with similar measurements get similar hypervectors – without us naming a single feature.</p><pre><code class="language-julia hljs">rp = RandomProjection(BipolarHV, 4; seed = 42)
 H_projected = [encode(rp, X[:, i]) for i in 1:size(X, 2)]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">150-element Vector{BipolarHV}:
  10000-element BipolarHV with 4921 positives and 5079 negatives
  10000-element BipolarHV with 4912 positives and 5088 negatives
@@ -227,4 +227,4 @@ H_projected = [encode(rp, X[:, i]) for i in 1:size(X, 2)]</code></pre><pre class
     return correct / sum(test)
 end
 
-mean(traintest_projection() for _ in 1:30)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.9638545226061169</code></pre><p>Comparable to the key–value encoder, from an encoder that needed no domain knowledge at all. The trade-off is exactly the one you would expect: the key–value representation can be taken apart again (we decoded petal lengths out of it), whereas a random projection is lossy by construction – <a href="../../api/#HyperdimensionalComputing.decode"><code>decode</code></a> for it is nearest-neighbour clean-up against a codebook, never inversion.</p><div class="admonition is-warning" id="Should-you-standardise-first?-1928083a83483ff0"><header class="admonition-header">Should you standardise first?<a class="admonition-anchor" href="#Should-you-standardise-first?-1928083a83483ff0" title="Permalink"></a></header><div class="admonition-body"><p>Common advice is to standardise features before projecting, and with good reason: a projection is dominated by whichever feature has the largest spread, so features on wildly different scales (say, grams and kilometres) need to be put on a common footing.</p><p>Iris is a case where the advice backfires, and it is worth seeing why. All four measurements are already in centimetres, and the most discriminative ones – petal length and width – are precisely the ones with the largest spread. Standardising throws that natural weighting away and gives the noisy sepal width an equal vote. Averaged over 30 random splits we measured <strong>0.98 ± 0.03</strong> on the raw features against <strong>0.83 ± 0.06</strong> on standardised ones, with the raw features winning 29 splits out of 30.</p><p>So: standardise when your features are <em>incommensurable</em>, not as a reflex. When they share a unit and their spread carries signal, leave them alone.</p></div></div><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../whats-the-dollar-of-mexico/">« What&#39;s the Dollar of Mexico?</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 29 July 2026 13:19">Wednesday 29 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+mean(traintest_projection() for _ in 1:30)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.9638545226061169</code></pre><p>Comparable to the key–value encoder, from an encoder that needed no domain knowledge at all. The trade-off is exactly the one you would expect: the key–value representation can be taken apart again (we decoded petal lengths out of it), whereas a random projection is lossy by construction – <a href="../../api/#HyperdimensionalComputing.decode"><code>decode</code></a> for it is nearest-neighbour clean-up against a codebook, never inversion.</p><div class="admonition is-warning" id="Should-you-standardise-first?-f77b9b82d027dd9b"><header class="admonition-header">Should you standardise first?<a class="admonition-anchor" href="#Should-you-standardise-first?-f77b9b82d027dd9b" title="Permalink"></a></header><div class="admonition-body"><p>Common advice is to standardise features before projecting, and with good reason: a projection is dominated by whichever feature has the largest spread, so features on wildly different scales (say, grams and kilometres) need to be put on a common footing.</p><p>Iris is a case where the advice backfires, and it is worth seeing why. All four measurements are already in centimetres, and the most discriminative ones – petal length and width – are precisely the ones with the largest spread. Standardising throws that natural weighting away and gives the noisy sepal width an equal vote. Averaged over 30 random splits we measured <strong>0.98 ± 0.03</strong> on the raw features against <strong>0.83 ± 0.06</strong> on standardised ones, with the raw features winning 29 splits out of 30.</p><p>So: standardise when your features are <em>incommensurable</em>, not as a reflex. When they share a unit and their spread carries signal, leave them alone.</p></div></div><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../whats-the-dollar-of-mexico/">« What&#39;s the Dollar of Mexico?</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 13 October 2026 10:21">Tuesday 13 October 2026</span>. Using Julia version 1.13.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
