@@ -151,6 +151,41 @@ end
                 similarity(encode(fast, 0.0), encode(fast, 1.0))
         end
 
+        @testset "ladder follows value order (regression #69)" begin
+            v = [0.0, 0.01, 0.02, 0.03, 0.5, 1.0]
+            sorted = LevelEncoder(BipolarHV, v; D = 2_000, seed = 5)
+            shuffled = LevelEncoder(BipolarHV, v[[4, 1, 6, 3, 5, 2]]; D = 2_000, seed = 5)
+            @test shuffled.values == sorted.values == v
+            @test shuffled.levels == sorted.levels
+            # duplicates collapse to one rung each
+            @test length(LevelEncoder(BinaryHV, [0.1, 0.1, 0.5, 0.9]; D = 100).levels) == 3
+            @test_throws ArgumentError LevelEncoder(BinaryHV, [1, 1])
+            # skewed data: similarity tracks value distance, not rank distance
+            @test similarity(encode(sorted, 0.0), encode(sorted, 0.03)) >
+                similarity(encode(sorted, 0.03), encode(sorted, 0.5))
+            # an evenly spaced vector builds the same ladder as the range form
+            @test LevelEncoder(BipolarHV, collect(range(0, 1, 5)); D = 100, seed = 9).levels ==
+                LevelEncoder(BipolarHV, (0, 1), 5; D = 100, seed = 9).levels
+            # values far from a linear scale warn; even grids and uniform data don't
+            @test_logs (:warn, r"linear scale") LevelEncoder(BipolarHV, exp.(0:0.25:10); D = 100)
+            @test_logs LevelEncoder(BipolarHV, (0, 1), 20; D = 100)
+            @test_logs LevelEncoder(BinaryHV, range(4.3, 7.9; step = 0.1); D = 100)
+            @test_logs LevelEncoder(BipolarHV, rand(Xoshiro(1), 100); D = 100)
+            @test_throws ArgumentError LevelEncoder(BipolarHV, [0, NaN, 1])
+            @test_throws ArgumentError LevelEncoder(BipolarHV, [0, 1, Inf])
+        end
+
+        @testset "a large gap gives unrelated levels, never opposite ones" begin
+            for HV in (BinaryHV, BipolarHV, TernaryHV)
+                lvl = LevelEncoder(HV, [0, 0.001, 1]; seed = 2)
+                @test abs(similarity(lvl.levels[2], lvl.levels[3]) - chancesimilarity(HV)) < 0.05
+            end
+            # bit-flip types: more than half the bits flipped would anti-correlate
+            @test_throws ArgumentError LevelEncoder(BipolarHV, (0, 1), 5; bandwidth = 0.8)
+            @test_throws ArgumentError LevelEncoder(BinaryHV, (0, 1), 5; bandwidth = 0.8)
+            @test LevelEncoder(TernaryHV, (0, 1), 5; D = 100, bandwidth = 0.8) isa LevelEncoder
+        end
+
         @testset "fractional power encoding (FHRR)" begin
             fpe = LevelEncoder(FHRR, 0:0.1:10; D = 1_000, seed = 11)
             @test fpe.base isa FHRR
