@@ -147,9 +147,9 @@ decodecolour(memory * encode(BipolarHV, :water))
 noisy = bundle(
     [
         bind(
-                encode(BipolarHV, label),
-                bundle([encodecolour(c), encodecolour(RGB(rand(), rand(), rand())), encodecolour(RGB(rand(), rand(), rand()))])
-            )
+            encode(BipolarHV, label),
+            bundle([encodecolour(c), encodecolour(RGB(rand(), rand(), rand())), encodecolour(RGB(rand(), rand(), rand()))])
+        )
             for (label, colours) in categories for c in colours
     ]
 )
