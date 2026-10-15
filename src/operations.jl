@@ -231,6 +231,16 @@ Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v), hv1
 Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v), hv1.distr)
 Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v .* hv2.v)
 Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
+
+# Wraps storage `v` computed from `hv1` in the hypervector type of `hv1`, keeping its
+# element distribution where the type has one.
+rewrap(::HV, v) where {HV <: AbstractHV} = HV(v)
+rewrap(::TernaryHV, v) = TernaryHV{eltype(v)}(v)  # inner: operands may hold accumulated counts
+rewrap(hv1::RealHV, v) = RealHV(v, hv1.distr)
+rewrap(hv1::GradedHV, v) = GradedHV(v, hv1.distr)
+rewrap(hv1::GradedBipolarHV, v) = GradedBipolarHV(v, hv1.distr)
+rewrap(::FHRR, v) = FHRR(v)
+
 Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
 
 
@@ -289,11 +299,7 @@ Permutes hypervector in-place by a specified number of shifts.
 
 This operations is used to assign an order to hypervectors.
 """
-function shift(hv::AbstractHV, k = 1)
-    r = similar(hv)
-    r.v .= circshift(hv.v, k)
-    return r
-end
+shift(hv::AbstractHV, k = 1) = rewrap(hv, circshift(hv.v, k))
 
 function shift!(hv::V, k = 1) where {V <: Union{BinaryHV, BipolarHV}}
     v = similar(hv.v)  # empty bitvector
