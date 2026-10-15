@@ -145,6 +145,24 @@ Random.seed!(42)
         end
     end
 
+    @testset "bind of a collection" begin
+        for HV in [BinaryHV, BipolarHV, TernaryHV, RealHV, GradedHV, GradedBipolarHV, FHRR]
+            hvs = [HV(; D = 100, seed = i) for i in 1:5]
+            pairwise = foldl(bind, hvs)
+            @test bind(hvs) isa HV
+            @test bind(hvs).v == pairwise.v
+            @test bind(Tuple(hvs)).v == pairwise.v
+            @test bind(hvs[1:1]) == hvs[1]
+            @test bind(hvs[1:1]) !== hvs[1]
+            @test_throws DimensionMismatch bind([hvs[1], HV(; D = 10)])
+            @test_throws "cannot bind an empty collection" bind(HV[])
+        end
+        D = 100
+        @test bind(Tuple([RealHV(; D, distr = Normal(0, 2)) for _ in 1:3])).distr == Normal(0, 2)
+        @test_throws "cannot bind hypervectors of different types" bind(AbstractHV[BinaryHV(; D), BipolarHV(; D)])
+        @test_throws "cannot bind hypervectors of different types" bind((RealHV(; D), FHRR(; D)))
+    end
+
     # Bundling is m-way: it combines all inputs at once, and for most types the rule
     # depends on how many there are. Chained `+` and `sum` must reach `bundle` with the
     # whole collection; folding pairwise bundles a bundle and is NOT equivalent.

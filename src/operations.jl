@@ -38,8 +38,10 @@ aggfun(::AbstractHV) = +
 aggfun(::GradedHV) = three_pi
 aggfun(::GradedBipolarHV) = three_pi_bipol
 
+# Elementwise binding rule on the stored representation (`hv.v`).
 bindfun(::AbstractHV) = *
 bindfun(::BinaryHV) = ⊻
+bindfun(::BipolarHV) = ⊻
 bindfun(::GradedHV) = fuzzy_xor
 bindfun(::GradedBipolarHV) = fuzzy_xor_bipol
 
@@ -213,6 +215,11 @@ self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplicati
 ([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy XOR ([`GradedHV`](@ref),
 [`GradedBipolarHV`](@ref)) or complex multiplication ([`FHRR`](@ref)).
 
+`bind(hvs)` binds every hypervector in a vector or tuple in a single pass, with the
+same result as folding the pairwise `bind` from left to right
+(`foldl(bind, hvs)`, or `hv1 * hv2 * hv3`). All elements must be of the same
+hypervector type and length; an empty collection throws an `ArgumentError`.
+
 # See also
 
 [`bundle`](@ref), [`unbind`](@ref), [`similarity`](@ref)
@@ -236,7 +243,38 @@ rewrap(hv1::GradedHV, v) = GradedHV(v, hv1.distr)
 rewrap(hv1::GradedBipolarHV, v) = GradedBipolarHV(v, hv1.distr)
 rewrap(::FHRR, v) = FHRR(v)
 
-Base.bind(hvs::AbstractVector{HV}) where {HV <: AbstractHV} = prod(hvs)
+function Base.bind(hvs::Union{AbstractVector{<:AbstractHV}, Tuple{Vararg{AbstractHV}}})
+    isempty(hvs) && throw(ArgumentError("cannot bind an empty collection of hypervectors"))
+    hv1 = first(hvs)
+    for hv in hvs
+        nameof(typeof(hv)) === nameof(typeof(hv1)) ||
+            throw(ArgumentError("cannot bind hypervectors of different types: got $(typeof(hv1)) and $(typeof(hv))"))
+    end
+    check_samelength(hv1, hvs)
+    # Folding left to right from a copy of the first input applies the binding rule
+    # in the same order as the pairwise `bind`, without intermediate hypervectors.
+    f = bindfun(hv1)
+    r = copy(hv1.v)
+    rest = Iterators.drop(hvs, 1)
+    if r isa BitVector  # XOR of packed bits: a few machine words per input
+        for hv in rest
+            r .⊻= hv.v
+        end
+    elseif parallel_worthwhile(length(r), length(hvs) * length(r)) && uniform_collection(hvs) &&
+            kernel_safe(f, eltype(r), eltype(r))
+        foreach_block!(r, length(hvs) * length(r)) do rng
+            rv = view(r, rng)
+            for hv in rest
+                rv .= f.(rv, view(hv.v, rng))
+            end
+        end
+    else
+        for hv in rest
+            r .= f.(r, hv.v)
+        end
+    end
+    return rewrap(hv1, r)
+end
 
 
 """
