@@ -32,7 +32,9 @@ fuzzy_xor(x, y) = (one(x) - x) * y + x * (one(y) - y)
 three_pi_bipol(x, y) = grad2bipol(three_pi(bipol2grad(x), bipol2grad(y)))
 fuzzy_xor_bipol(x, y) = grad2bipol(fuzzy_xor(bipol2grad(x), bipol2grad(y)))  # currently just *
 
-aggfun(::Type{<:AbstractHV}) = +
+# Elementwise bundling rule on the stored representation (`hv.v`), folded into the
+# accumulator returned by `empty_vector`.
+aggfun(::AbstractHV) = +
 aggfun(::GradedHV) = three_pi
 aggfun(::GradedBipolarHV) = three_pi_bipol
 
@@ -89,6 +91,11 @@ end
 
 # BUNDLE
 # ------
+#
+# Bundling folds `aggfun(hv)` elementwise over the inputs' storage, starting from
+# `empty_vector(hv)`, and `bundleresult` turns the accumulator into the result. The
+# fused combinators (`bundlesequence`, `ngrams`, `hashtable`) share these pieces, so
+# they agree exactly with bundling materialized inputs.
 
 # binary and bipolar: use majority
 #
@@ -100,62 +107,49 @@ end
 # input hypervector. Pass `rng` to override the seed (e.g. reproducible draws
 # from a caller-controlled stream), or `rng = Random.default_rng()` to recover
 # the previous, non-deterministic behaviour.
-function bundle(hvr::Union{BinaryHV, BipolarHV}, hdvs, r; rng::Union{Nothing, AbstractRNG} = nothing)
-    m = length(hdvs)
-    for hv in hdvs
-        r .+= hv.v
-    end
+function bundleresult(hv1::Union{BinaryHV, BipolarHV}, r, m; rng::Union{Nothing, AbstractRNG} = nothing)
     if iseven(m)  # break ties
         tie_rng = isnothing(rng) ? Xoshiro(hash(r)) : rng
         r .+= bitrand(tie_rng, length(r))
     end
-    return typeof(hvr)(r .> m / 2)
+    return typeof(hv1)(r .> m / 2)
 end
 
 # ternary: just add them, no normalization by default
-function bundle(
-        ::TernaryHV, hdvs, r;
-        normalize = false
-    )
-    for hv in hdvs
-        r .+= hv.v
-    end
+function bundleresult(::TernaryHV, r, m; normalize = false)
     normalize && clamp!(r, -1, 1)
     # inner constructor: bundling may exceed the ternary domain by design
     return TernaryHV{eltype(r)}(r)
 end
 
 # realhv: just add + rescale with sqrt m
-function bundle(hv1::RealHV, hdvs, r)
+bundleresult(hv1::RealHV, r, m) = RealHV(r ./= sqrt(m), hv1.distr)
+bundleresult(hv1::GradedHV, r, m) = GradedHV(r, hv1.distr)
+bundleresult(hv1::GradedBipolarHV, r, m) = GradedBipolarHV(r, hv1.distr)
+
+unitphase(z) = z / abs(z)
+bundleresult(::FHRR, r, m) = FHRR(elementwise!(unitphase, r, 16))
+
+# Folds `f` elementwise over the storage of every hypervector in `hdvs` into `r`, and
+# returns the number of hypervectors.
+function aggregate!(r, f::F, hdvs) where {F}
+    if hdvs isa Union{AbstractVector, Tuple} && parallel_worthwhile(length(r), length(hdvs) * length(r)) &&
+            uniform_collection(hdvs) && kernel_safe(f, eltype(r), eltype(first(hdvs).v))
+        check_samelength(r, hdvs)
+        foreach_block!(r, length(hdvs) * length(r)) do rng
+            rv = view(r, rng)
+            for hv in hdvs
+                rv .= f.(rv, view(hv.v, rng))
+            end
+        end
+        return length(hdvs)
+    end
     m = 0
-    for hv in hdvs
-        r .+= hv.v
+    for hv in hdvs  # small inputs, single-pass iterators and mixed collections, serially
+        r .= f.(r, hv.v)
         m += 1
     end
-    r ./= sqrt(m)
-    return RealHV(r, hv1.distr)
-end
-
-function bundle(hv1::GradedHV, hdvs, r)
-    for hv in hdvs
-        r .= three_pi.(r, hv.v)
-    end
-    return GradedHV(r, hv1.distr)
-end
-
-function bundle(hv1::GradedBipolarHV, hdvs, r)
-    for hv in hdvs
-        r .= three_pi_bipol.(r, hv.v)
-    end
-    return GradedBipolarHV(r, hv1.distr)
-end
-
-function bundle(::FHRR, hdvs, r)
-    for hv in hdvs
-        r .+= hv.v
-    end
-    r ./= abs.(r)
-    return FHRR(r)
+    return m
 end
 
 """
@@ -191,7 +185,8 @@ addition ([`TernaryHV`](@ref), [`RealHV`](@ref)), fuzzy aggregation
 function bundle(hdvs; kwargs...)
     hv = first(hdvs)
     r = empty_vector(hv)
-    return bundle(hv, hdvs, r; kwargs...)
+    m = aggregate!(r, aggfun(hv), hdvs)
+    return bundleresult(hv, r, m; kwargs...)
 end
 
 Base.:+(u::HV, v::AbstractArray...) where {HV <: AbstractHV} = bundle((u, v...))
