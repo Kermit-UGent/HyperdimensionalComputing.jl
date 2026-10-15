@@ -109,9 +109,7 @@ function bundle(hvr::Union{BinaryHV, BipolarHV}, hdvs, r; rng::Union{Nothing, Ab
         tie_rng = isnothing(rng) ? Xoshiro(hash(r)) : rng
         r .+= bitrand(tie_rng, length(r))
     end
-    hvr = similar(hvr)
-    hvr.v .= r .> m / 2
-    return hvr
+    return typeof(hvr)(r .> m / 2)
 end
 
 # ternary: just add them, no normalization by default
