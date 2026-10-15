@@ -87,6 +87,11 @@ julia> length(BinaryHV(:cat; D = 100))    # dimensionality is set with the keywo
 """
 abstract type AbstractHV{T} <: AbstractVector{T} end
 
+# Element-domain predicates checked by the validating constructors.
+in_unit_interval(x) = 0 ≤ x ≤ 1
+in_bipolar_interval(x) = -1 ≤ x ≤ 1
+has_unit_modulus(z) = abs(z) ≈ 1
+
 Base.copy(hv::HV) where {HV <: AbstractHV} = HV(copy(hv.v))
 # Scalar indexing returns the element value; non-scalar indexing (ranges, index
 # vectors, logical masks) returns a plain Vector of element values, NOT a new
@@ -697,7 +702,7 @@ struct GradedHV{T <: Real} <: AbstractHV{T}
             v::AbstractVector{T},
             distr::Distribution = eldist(GradedHV)
         ) where {T <: Real}
-        all(x -> 0 ≤ x ≤ 1, v) || throw(ArgumentError("GradedHV elements must lie in [0, 1]"))
+        parallel_all(in_unit_interval, v) || throw(ArgumentError("GradedHV elements must lie in [0, 1]"))
         return new{T}(v, distr)
     end
 end
@@ -787,7 +792,7 @@ struct GradedBipolarHV{T <: Real} <: AbstractHV{T}
             v::AbstractVector{T},
             distr::Distribution = eldist(GradedBipolarHV)
         ) where {T <: Real}
-        all(x -> -1 ≤ x ≤ 1, v) || throw(ArgumentError("GradedBipolarHV elements must lie in [-1, 1]"))
+        parallel_all(in_bipolar_interval, v) || throw(ArgumentError("GradedBipolarHV elements must lie in [-1, 1]"))
         return new{T}(v, distr)
     end
 end
@@ -872,7 +877,7 @@ struct FHRR{T <: Complex} <: AbstractHV{T}
     v::Vector{T}
 
     function FHRR{T}(v::Vector{T}) where {T <: Complex}
-        all(z -> abs(z) ≈ 1, v) || throw(
+        parallel_all(has_unit_modulus, v, 16) || throw(
             ArgumentError("FHRR elements must lie on the complex unit circle (unit modulus)")
         )
         return new{T}(v)
