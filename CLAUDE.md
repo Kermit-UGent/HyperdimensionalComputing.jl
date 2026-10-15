@@ -13,6 +13,7 @@ Carlos Vigil-Vásquez, Dimi Boeckaerts, Michiel Stock, Steff Taelman
 ```
 src/
   HyperdimensionalComputing.jl  # Main module, exports
+  kernels.jl                    # Polyester-parallel elementwise kernels shared by the operations
   types.jl                      # AbstractHV and 7 concrete vector types
   operations.jl                 # bundle, bind, unbind, shift, perturbate
   encoding.jl                   # Combinators (ngrams, hashtable, ...): hypervectors in, hypervector out
@@ -25,6 +26,7 @@ test/
   runtests.jl                   # Test runner
   types.jl, operations.jl, encoding.jl, inference.jl, representations.jl
   ext_display.jl                # rich-display tests, run in a separate process (extension loading is irreversible)
+  kernels.jl                    # fused/parallel kernels vs serial references, all types; also run in separate 1- and 4-thread processes
 docs/
   src/examples/                 # Literate.jl tutorials (intro-to-hdc, encoding-data,
                                 #   colours, dollar-of-mexico, iris); *.md is Literate
@@ -94,9 +96,20 @@ Numeric values are encoded with `LevelEncoder` (encode.jl), which replaced the o
 
 ## Dependencies
 
-Core: Distributions, LinearAlgebra, Random
+Core: Distributions, LinearAlgebra, Polyester, Random
 Optional: UnicodePlots (extension for REPL visualization)
 Julia compat: >= 1.11
+
+## Performance kernels
+
+The operations share elementwise kernels in kernels.jl. Results equal the plain serial computation (`similarity` up to floating-point rounding):
+
+- Every bundling rule is split into `empty_vector` (accumulator), `aggfun` (elementwise fold) and `bundleresult` (finishing step); binding uses `bindfun` and `rewrap`. `bundle`, `bind(hvs)`, `bundlesequence`, `bindsequence`, `ngrams` and `hashtable` fold these rules directly over the inputs' storage (shifts included), so no intermediate hypervectors are allocated, and apply them in the same per-element order as the unfused path.
+- `foreach_block!` splits positions into blocks (multiples of 128, at most 1024 elements) handed to Polyester's `@batch`. Below `PARALLEL_MIN_WORK` element operations (weighted by a per-element `cost`), or with one Julia thread, it makes one full-range serial pass instead.
+- Pairwise `bind`/`unbind` and the constructor checks (`FHRR` unit modulus, graded ranges) run through `elementwise`/`parallel_all`.
+- `similarity` is a single fused pass per type: popcounts on packed bits for Binary/Bipolar, `@simd` float accumulation otherwise (Int64 does not vectorize on AArch64: NEON has no 64-bit integer vector multiply). `nearest_neighbor` and the similarity matrix parallelize across the collection; with `method` kwargs they fall back to the generic methods.
+- **Nothing inside a `@batch` body may throw.** With Polyester 0.7, an exception in a worker task makes every later `@batch` in the process run serially, and an exception in the calling thread's share crashes the process (segfault) on the next `@batch`. Kernels therefore validate lengths before `@batch`, and run in parallel only for collections of one concrete type whose element types are `NonThrowingElement`s that `f` maps back to the accumulator type (`kernel_safe`); anything else takes a serial path that throws normally.
+- On Apple Silicon, use `--threads` ≤ the number of performance cores: macOS cannot pin threads (ThreadPinning.jl is Linux-only), and Polyester's static split waits on whichever task lands on an efficiency core.
 
 ## Code style
 
