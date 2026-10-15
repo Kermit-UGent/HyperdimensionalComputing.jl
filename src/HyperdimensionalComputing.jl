@@ -2,9 +2,11 @@ module HyperdimensionalComputing
 
 using Random
 using Distributions
+using Polyester: @batch
 import LinearAlgebra
 import LinearAlgebra: norm, dot
 
+include("kernels.jl")
 include("types.jl")
 export AbstractHV,
     BinaryHV,
