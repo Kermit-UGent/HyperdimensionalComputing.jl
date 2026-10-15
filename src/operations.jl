@@ -220,11 +220,11 @@ self-inverse ([`BinaryHV`](@ref), [`BipolarHV`](@ref)), elementwise multiplicati
 Base.bind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = HV(hv1.v .* hv2.v)  # default
 Base.bind(hv1::BinaryHV, hv2::BinaryHV) = BinaryHV(hv1.v .⊻ hv2.v)
 Base.bind(hv1::BipolarHV, hv2::BipolarHV) = BipolarHV(hv1.v .⊻ hv2.v)
-Base.bind(hv1::TernaryHV, hv2::TernaryHV) = (v = hv1.v .* hv2.v; TernaryHV{eltype(v)}(v))  # inner: operands may hold accumulated counts
-Base.bind(hv1::RealHV, hv2::RealHV) = RealHV(hv1.v .* hv2.v, hv1.distr)
-Base.bind(hv1::GradedHV, hv2::GradedHV) = GradedHV(fuzzy_xor.(hv1.v, hv2.v), hv1.distr)
-Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = GradedBipolarHV(fuzzy_xor_bipol.(hv1.v, hv2.v), hv1.distr)
-Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v .* hv2.v)
+Base.bind(hv1::TernaryHV, hv2::TernaryHV) = rewrap(hv1, elementwise(*, hv1.v, hv2.v))
+Base.bind(hv1::RealHV, hv2::RealHV) = rewrap(hv1, elementwise(*, hv1.v, hv2.v))
+Base.bind(hv1::GradedHV, hv2::GradedHV) = rewrap(hv1, elementwise(fuzzy_xor, hv1.v, hv2.v))
+Base.bind(hv1::GradedBipolarHV, hv2::GradedBipolarHV) = rewrap(hv1, elementwise(fuzzy_xor_bipol, hv1.v, hv2.v))
+Base.bind(hv1::FHRR, hv2::FHRR) = FHRR(elementwise(*, hv1.v, hv2.v, 4))
 Base.:*(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
 
 # Wraps storage `v` computed from `hv1` in the hypervector type of `hv1`, keeping its
@@ -262,7 +262,7 @@ division.
 [`bind`](@ref), [`bundle`](@ref), [`similarity`](@ref)
 """
 unbind(hv1::HV, hv2::HV) where {HV <: AbstractHV} = bind(hv1, hv2)
-unbind(hv1::FHRR, hv2::FHRR) = FHRR(hv1.v ./ hv2.v)
+unbind(hv1::FHRR, hv2::FHRR) = FHRR(elementwise(/, hv1.v, hv2.v, 4))
 unbind(::RealHV, ::RealHV) = throw(
     ArgumentError(
         "real-valued MAP binding is not exactly invertible; recover bound " *
