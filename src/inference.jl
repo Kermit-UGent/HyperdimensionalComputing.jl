@@ -187,10 +187,29 @@ the similarity metrics defined by the pairwise version of `similarity`.
 function similarity(hvs::AbstractVector{<:AbstractHV}; kwargs...)
     n = length(hvs)
     S = zeros(n, n)
+    if isempty(kwargs) && uniform_collection(hvs) && all(hv -> length(hv) == length(first(hvs)), hvs) &&
+            n * n * length(first(hvs)) ÷ 2 >= PARALLEL_MIN_WORK
+        # Row `i` of the upper triangle holds `n - i + 1` pairs; pairing row `t` with
+        # row `n + 1 - t` gives every iteration the same amount of work.
+        i0 = firstindex(hvs)
+        @batch for t in 1:cld(n, 2)
+            similarity_row!(S, hvs, i0, t)
+            n + 1 - t == t || similarity_row!(S, hvs, i0, n + 1 - t)
+        end
+        return S
+    end
     for i in 1:n
         for j in i:n
             S[i, j] = S[j, i] = similarity(hvs[i], hvs[j]; kwargs...)
         end
+    end
+    return S
+end
+
+function similarity_row!(S, hvs, i0, i)
+    hi = hvs[i0 + i - 1]
+    for j in i:size(S, 2)
+        S[i, j] = S[j, i] = similarity(hi, hvs[i0 + j - 1])
     end
     return S
 end
@@ -222,6 +241,45 @@ nearest_neighbor(u::AbstractHV, collection; kwargs...) =
 
 nearest_neighbor(u::AbstractHV, collection::Dict; kwargs...) =
     maximum((similarity(u, xi; kwargs...), k, xi) for (k, xi) in collection)
+
+# Whether the similarities of `u` to `collection` can be computed inside `@batch`:
+# every element has the concrete type and length of `u`, so no call can throw.
+function parallel_similarities(u::AbstractHV, collection::AbstractVector)
+    isempty(collection) && return false
+    T = typeof(u)
+    return all(x -> typeof(x) === T && length(x) == length(u), collection)
+end
+
+# Similarities of `u` to every element of `collection`, in iteration order.
+function similarities(u::AbstractHV, collection::AbstractVector)
+    n = length(collection)
+    i0 = firstindex(collection)
+    sims = Vector{typeof(similarity(u, collection[i0]))}(undef, n)
+    if n * length(u) < PARALLEL_MIN_WORK
+        for j in 1:n
+            sims[j] = similarity(u, collection[i0 + j - 1])
+        end
+    else
+        @batch for j in 1:n
+            sims[j] = similarity(u, collection[i0 + j - 1])
+        end
+    end
+    return sims
+end
+
+function nearest_neighbor(u::AbstractHV, collection::AbstractVector; kwargs...)
+    (isempty(kwargs) && parallel_similarities(u, collection)) ||
+        return invoke(nearest_neighbor, Tuple{AbstractHV, Any}, u, collection; kwargs...)
+    sims = similarities(u, collection)
+    return maximum((s, i, xi) for (i, (s, xi)) in enumerate(zip(sims, collection)))
+end
+
+function nearest_neighbor(u::AbstractHV, collection::AbstractVector, k::Int; kwargs...)
+    (isempty(kwargs) && parallel_similarities(u, collection)) ||
+        return invoke(nearest_neighbor, Tuple{AbstractHV, Any, Int}, u, collection, k; kwargs...)
+    sims = [(s, i) for (i, s) in enumerate(similarities(u, collection))]
+    return partialsort!(sims, 1:k, rev = true)
+end
 
 """
     nearest_neighbor(u::AbstractHV, collection[, k::Int]; kwargs...)
