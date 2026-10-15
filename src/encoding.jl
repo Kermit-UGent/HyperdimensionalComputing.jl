@@ -154,9 +154,28 @@ bundling and shift operations.
 
 - [`bindsequence`](@ref): Binding-sequence encoding, binding-variant of this encoder
 """
+# Fused: folds the bundling rule over the shifted inputs block by block, without
+# materializing the shifts. Collections the fused kernel cannot take (mixed types,
+# element types whose arithmetic can throw) shift and bundle explicitly.
 function bundlesequence(vs::AbstractVector{<:AbstractHV})
     @assert length(vs) > 1 "Can't bundle sequence of a single hypervector"
-    return bundle([shift(hv, i - 1) for (i, hv) in enumerate(vs)])
+    hv1 = first(vs)
+    r = empty_vector(hv1)
+    f = aggfun(hv1)
+    if !(uniform_collection(vs) && kernel_safe(f, eltype(r), eltype(hv1.v)))
+        return bundle([shift(hv, i - 1) for (i, hv) in enumerate(vs)])
+    end
+    check_samelength(r, vs)
+    n = length(r)
+    foreach_block!(r, length(vs) * n) do rng
+        for (i, hv) in enumerate(vs)
+            foreach_shifted(rng, i - 1, n) do dst, src
+                rv = view(r, dst)
+                rv .= f.(rv, view(hv.v, src))
+            end
+        end
+    end
+    return bundleresult(hv1, r, length(vs))
 end
 
 """
@@ -205,9 +224,29 @@ binding and shift operations.
 
 - [`bundlesequence`](@ref): Bundle-sequence encoding, bundling-variant of this encoder
 """
+# Fused like `bundlesequence`.
 function bindsequence(vs::AbstractVector{<:AbstractHV})
     @assert length(vs) > 1 "Can't bind sequence of a single hypervector"
-    return bind([shift(hv, i - 1) for (i, hv) in enumerate(vs)])
+    hv1 = first(vs)
+    f = bindfun(hv1)
+    T = eltype(hv1.v)
+    # Packed bits bind faster word-wise, on materialized shifts, than unpacked.
+    if hv1.v isa BitVector || !(uniform_collection(vs) && kernel_safe(f, T, T))
+        return bind([shift(hv, i - 1) for (i, hv) in enumerate(vs)])
+    end
+    check_samelength(hv1, vs)
+    r = Vector{T}(hv1.v)
+    n = length(r)
+    foreach_block!(r, length(vs) * n) do rng
+        for (i, hv) in enumerate(vs)
+            i == 1 && continue
+            foreach_shifted(rng, i - 1, n) do dst, src
+                rv = view(r, dst)
+                rv .= f.(rv, view(hv.v, src))
+            end
+        end
+    end
+    return rewrap(hv1, r)
 end
 
 """
@@ -258,7 +297,25 @@ and \$\\oplus\$ are the binding and bundling operations.
 """
 function hashtable(keys::T, values::T) where {T <: AbstractVector{<:AbstractHV}}
     @assert length(keys) == length(values) "Number of keys and values aren't equal"
-    return bundle(map(prod, zip(keys, values)))
+    isempty(keys) && return bundle(map(prod, zip(keys, values)))
+    hv1 = first(keys)
+    r = empty_vector(hv1)
+    af, bf = aggfun(hv1), bindfun(hv1)
+    S = eltype(hv1.v)
+    fusable = !(hv1.v isa BitVector) && uniform_collection(keys) && uniform_collection(values) &&
+        typeof(first(values)) === typeof(hv1) && kernel_safe(bf, S, S) && kernel_safe(af, eltype(r), S)
+    fusable || return bundle(map(prod, zip(keys, values)))
+    # Fused: bundles each key-value product block by block, without materializing
+    # the bound pairs.
+    check_samelength(r, keys)
+    check_samelength(r, values)
+    foreach_block!(r, 2 * length(keys) * length(r)) do rng
+        rv = view(r, rng)
+        for (k, v) in zip(keys, values)
+            rv .= af.(rv, bf.(view(k.v, rng), view(v.v, rng)))
+        end
+    end
+    return bundleresult(hv1, r, length(keys))
 end
 
 """
@@ -376,10 +433,37 @@ function ngrams(vs::AbstractVector{<:AbstractHV}, n::Int = 3)
     l = length(vs)
     p = l - n + 1
     @assert 1 <= n <= length(vs) "`n` must be 1 ≤ n ≤ $l"
-    return map(
-        s -> bindsequence(s),
-        (vs[f:(f + (n - 1))] for f in 1:p)
-    ) |> multiset
+    hv1 = first(vs)
+    r = empty_vector(hv1)
+    af, bf = aggfun(hv1), bindfun(hv1)
+    T = eltype(hv1.v)
+    if n == 1 || hv1.v isa BitVector || !(uniform_collection(vs) && kernel_safe(bf, T, T) && kernel_safe(af, eltype(r), T))
+        return map(
+            s -> bindsequence(s),
+            (vs[f:(f + (n - 1))] for f in 1:p)
+        ) |> multiset
+    end
+    # Fused: each block binds every window's shifted members into a block-sized
+    # buffer and folds it into the bundle, so no per-window hypervectors are allocated.
+    check_samelength(r, vs)
+    D = length(r)
+    i0 = firstindex(vs)
+    foreach_block!(r, p * n * D) do rng
+        buf = Vector{T}(undef, length(rng))
+        for f in 0:(p - 1)
+            buf .= view(vs[i0 + f].v, rng)
+            for j in 1:(n - 1)
+                hv = vs[i0 + f + j]
+                foreach_shifted(rng, j, D) do dst, src
+                    bv = view(buf, dst .- (first(rng) - 1))
+                    bv .= bf.(bv, view(hv.v, src))
+                end
+            end
+            rv = view(r, rng)
+            rv .= af.(rv, buf)
+        end
+    end
+    return bundleresult(hv1, r, p)
 end
 
 """
