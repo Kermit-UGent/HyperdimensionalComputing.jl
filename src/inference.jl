@@ -19,13 +19,68 @@ sim_jacc(u::AbstractVector, v::AbstractVector) = dot(u, v) / sum(ui + vi - ui * 
 
 dist_hamming(u::AbstractVector, v::AbstractVector) = sum(abs(ui - vi) for (ui, vi) in zip(u, v))
 
-similarity(u::BipolarHV, v::BipolarHV) = sim_cos(u, v)
-similarity(u::TernaryHV, v::TernaryHV) = sim_cos(u, v)
-similarity(u::GradedBipolarHV, v::GradedBipolarHV) = sim_cos(u, v)
-similarity(u::RealHV, v::RealHV) = sim_cos(u, v)
-similarity(u::BinaryHV, v::BinaryHV) = sim_jacc(u, v)
-similarity(u::GradedHV, v::GradedHV) = sim_jacc(u, v)
-similarity(u::FHRR, v::FHRR) = real(dot(u.v, v.v)) / length(u)
+# The `similarity` methods below are single fused passes over the stored
+# representation, without converting or copying the operands.
+
+# Bits: popcounts on the packed 64-bit words of the `BitVector`s (its `chunks`, whose
+# bits past the end are always zero). A bipolar dot product is the number of
+# agreeing minus disagreeing positions, and both norms are `sqrt(length(u))`.
+function popcount(op, u::BitVector, v::BitVector)
+    length(u) == length(v) || throw(DimensionMismatch("hypervectors must have equal length: got $(length(u)) and $(length(v))"))
+    s = 0
+    for (a, b) in zip(u.chunks, v.chunks)
+        s += count_ones(op(a, b))
+    end
+    return s
+end
+similarity(u::BinaryHV, v::BinaryHV) = popcount(&, u.v, v.v) / popcount(|, u.v, v.v)
+similarity(u::BipolarHV, v::BipolarHV) = (length(u) - 2popcount(⊻, u.v, v.v)) / length(u)
+
+# Accumulates in floating point, which for integer elements stays exact below 2^53
+# and, unlike Int64, vectorizes on targets without SIMD 64-bit integer multiplication
+# (e.g. AArch64 NEON).
+function sim_cos_fused(u::AbstractVector, v::AbstractVector)
+    R = float(promote_type(eltype(u), eltype(v)))
+    d = nu = nv = zero(R)
+    @simd for i in eachindex(u, v)
+        x = R(u[i])
+        y = R(v[i])
+        d = muladd(x, y, d)
+        nu = muladd(x, x, nu)
+        nv = muladd(y, y, nv)
+    end
+    return d / (sqrt(nu) * sqrt(nv))
+end
+
+function sim_jacc_fused(u::AbstractVector, v::AbstractVector)
+    R = float(promote_type(eltype(u), eltype(v)))
+    d = s = zero(R)
+    @simd for i in eachindex(u, v)
+        x = R(u[i])
+        y = R(v[i])
+        d = muladd(x, y, d)
+        s += x + y - x * y
+    end
+    return d / s
+end
+
+# Real part of the Hermitian inner product, `Σ re(conj(x) * y)`, divided by the length.
+function sim_phasor_fused(u::AbstractVector{<:Complex}, v::AbstractVector{<:Complex})
+    R = float(real(promote_type(eltype(u), eltype(v))))
+    d = zero(R)
+    @simd for i in eachindex(u, v)
+        x, y = u[i], v[i]
+        d = muladd(real(x), real(y), d)
+        d = muladd(imag(x), imag(y), d)
+    end
+    return d / length(u)
+end
+
+similarity(u::TernaryHV, v::TernaryHV) = sim_cos_fused(u.v, v.v)
+similarity(u::RealHV, v::RealHV) = sim_cos_fused(u.v, v.v)
+similarity(u::GradedBipolarHV, v::GradedBipolarHV) = sim_cos_fused(u.v, v.v)
+similarity(u::GradedHV, v::GradedHV) = sim_jacc_fused(u.v, v.v)
+similarity(u::FHRR, v::FHRR) = sim_phasor_fused(u.v, v.v)
 
 """
     similaritymetric(HV)
