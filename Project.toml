@@ -1,7 +1,7 @@
 name = "HyperdimensionalComputing"
 uuid = "ebb7690e-f605-4e7a-86a0-727dbed6b293"
 authors = ["Carlos Vigil-Vásquez", "Dimi Boeckaerts", "Michiel Stock", "Steff Taelman"]
-version = "1.0.0"
+version = "1.0.1"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
